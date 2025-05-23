@@ -21,7 +21,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Vaishnavi Jumbo</h1>
+              <h1 className="text-2xl font-bold">Vaishnavi Jumbo Zerox</h1>
               <p className="text-blue-100 text-sm">Powered by Sri Murali Krishna Computers - Cash Register</p>
             </div>
             <Button 
