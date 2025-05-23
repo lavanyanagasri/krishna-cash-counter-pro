@@ -40,7 +40,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-blue-900 mb-2">
-            Vaishnavi Jumbo
+            Vaishnavi Jumbo Zerox
           </h1>
           <p className="text-lg text-blue-700">Powered by Sri Murali Krishna Computers</p>
           <p className="text-sm text-gray-600 mt-2">Cash Register System</p>
