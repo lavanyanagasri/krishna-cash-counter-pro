@@ -14,7 +14,8 @@ interface Transaction {
   date: string;
   time: string;
   salesType: "Cash" | "PhonePe";
-  xeroxType: "Black" | "White";
+  xeroxType: "Black" | "White" | "Color";
+  paperSize: "A4" | "A3" | "A2" | "A1" | "A0";
   quantity: number;
   cost: number;
   estimation: number;
@@ -24,20 +25,40 @@ interface Transaction {
 const DayBook = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [salesType, setSalesType] = useState<"Cash" | "PhonePe">("Cash");
-  const [xeroxType, setXeroxType] = useState<"Black" | "White">("Black");
+  const [xeroxType, setXeroxType] = useState<"Black" | "White" | "Color">("Black");
+  const [paperSize, setPaperSize] = useState<"A4" | "A3" | "A2" | "A1" | "A0">("A4");
   const [quantity, setQuantity] = useState("");
   const [estimation, setEstimation] = useState("");
   const { toast } = useToast();
 
-  // Cost per page (in rupees)
+  // Cost per page (in rupees) based on xerox type and paper size
   const costs = {
-    Black: 2,
-    White: 1
+    Black: {
+      A4: 2,
+      A3: 5,
+      A2: 10,
+      A1: 20,
+      A0: 40
+    },
+    White: {
+      A4: 1,
+      A3: 3,
+      A2: 7,
+      A1: 15,
+      A0: 30
+    },
+    Color: {
+      A4: 10,
+      A3: 20,
+      A2: 40,
+      A1: 75,
+      A0: 150
+    }
   };
 
   const calculateFinalCost = () => {
     const qty = parseInt(quantity) || 0;
-    const cost = qty * costs[xeroxType];
+    const cost = qty * costs[xeroxType][paperSize];
     const est = parseFloat(estimation) || 0;
     return Math.max(0, cost - est);
   };
@@ -53,7 +74,7 @@ const DayBook = () => {
     }
 
     const qty = parseInt(quantity);
-    const cost = qty * costs[xeroxType];
+    const cost = qty * costs[xeroxType][paperSize];
     const est = parseFloat(estimation) || 0;
     const finalCost = Math.max(0, cost - est);
 
@@ -63,6 +84,7 @@ const DayBook = () => {
       time: new Date().toLocaleTimeString('en-IN'),
       salesType,
       xeroxType,
+      paperSize,
       quantity: qty,
       cost,
       estimation: est,
@@ -77,7 +99,7 @@ const DayBook = () => {
     
     toast({
       title: "Transaction Added",
-      description: `Added ${qty} ${xeroxType.toLowerCase()} xerox copies`,
+      description: `Added ${qty} ${xeroxType.toLowerCase()} xerox copies (${paperSize})`,
     });
   };
 
@@ -104,7 +126,7 @@ const DayBook = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
             <div className="space-y-2">
               <Label htmlFor="salesType">Sales Type</Label>
               <Select value={salesType} onValueChange={(value: "Cash" | "PhonePe") => setSalesType(value)}>
@@ -120,13 +142,30 @@ const DayBook = () => {
 
             <div className="space-y-2">
               <Label htmlFor="xeroxType">Xerox Type</Label>
-              <Select value={xeroxType} onValueChange={(value: "Black" | "White") => setXeroxType(value)}>
+              <Select value={xeroxType} onValueChange={(value: "Black" | "White" | "Color") => setXeroxType(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Black">Black (₹2/page)</SelectItem>
-                  <SelectItem value="White">White (₹1/page)</SelectItem>
+                  <SelectItem value="Black">Black (₹{costs.Black.A4}/A4 page)</SelectItem>
+                  <SelectItem value="White">White (₹{costs.White.A4}/A4 page)</SelectItem>
+                  <SelectItem value="Color">Color (₹{costs.Color.A4}/A4 page)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="paperSize">Paper Size</Label>
+              <Select value={paperSize} onValueChange={(value: "A4" | "A3" | "A2" | "A1" | "A0") => setPaperSize(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A4">A4 (₹{costs[xeroxType].A4})</SelectItem>
+                  <SelectItem value="A3">A3 (₹{costs[xeroxType].A3})</SelectItem>
+                  <SelectItem value="A2">A2 (₹{costs[xeroxType].A2})</SelectItem>
+                  <SelectItem value="A1">A1 (₹{costs[xeroxType].A1})</SelectItem>
+                  <SelectItem value="A0">A0 (₹{costs[xeroxType].A0})</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -148,7 +187,7 @@ const DayBook = () => {
               <Input
                 id="cost"
                 type="text"
-                value={`₹${(parseInt(quantity) || 0) * costs[xeroxType]}`}
+                value={`₹${(parseInt(quantity) || 0) * costs[xeroxType][paperSize]}`}
                 readOnly
                 className="bg-gray-50"
               />
@@ -177,15 +216,17 @@ const DayBook = () => {
                 className="bg-green-50 font-semibold"
               />
             </div>
-          </div>
 
-          <Button 
-            onClick={addTransaction}
-            className="mt-4 bg-green-600 hover:bg-green-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Transaction
-          </Button>
+            <div className="space-y-2 flex items-end">
+              <Button 
+                onClick={addTransaction}
+                className="bg-green-600 hover:bg-green-700 w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Transaction
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -238,6 +279,7 @@ const DayBook = () => {
                     <TableHead>Time</TableHead>
                     <TableHead>Sales Type</TableHead>
                     <TableHead>Xerox Type</TableHead>
+                    <TableHead>Paper Size</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Estimation</TableHead>
@@ -263,11 +305,14 @@ const DayBook = () => {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           transaction.xeroxType === 'Black' 
                             ? 'bg-gray-100 text-gray-800' 
-                            : 'bg-orange-100 text-orange-800'
+                            : transaction.xeroxType === 'White'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-red-100 text-red-800'
                         }`}>
                           {transaction.xeroxType}
                         </span>
                       </TableCell>
+                      <TableCell>{transaction.paperSize}</TableCell>
                       <TableCell>{transaction.quantity}</TableCell>
                       <TableCell>₹{transaction.cost}</TableCell>
                       <TableCell>₹{transaction.estimation}</TableCell>
@@ -294,3 +339,4 @@ const DayBook = () => {
 };
 
 export default DayBook;
+

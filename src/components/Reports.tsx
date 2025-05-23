@@ -22,6 +22,12 @@ const Reports = () => {
         phonepe: Math.floor(Math.random() * 300) + 50,
         black: Math.floor(Math.random() * 200) + 50,
         white: Math.floor(Math.random() * 150) + 30,
+        color: Math.floor(Math.random() * 250) + 75,
+        a4: Math.floor(Math.random() * 300) + 100,
+        a3: Math.floor(Math.random() * 200) + 50,
+        a2: Math.floor(Math.random() * 150) + 30,
+        a1: Math.floor(Math.random() * 100) + 20,
+        a0: Math.floor(Math.random() * 50) + 10,
         total: 0
       };
     }).reverse();
@@ -45,6 +51,12 @@ const Reports = () => {
       phonepe: Math.floor(Math.random() * 10000) + 3000,
       black: Math.floor(Math.random() * 8000) + 2000,
       white: Math.floor(Math.random() * 5000) + 1000,
+      color: Math.floor(Math.random() * 7000) + 3000,
+      a4: Math.floor(Math.random() * 10000) + 5000,
+      a3: Math.floor(Math.random() * 7000) + 2000,
+      a2: Math.floor(Math.random() * 5000) + 1000,
+      a1: Math.floor(Math.random() * 3000) + 500,
+      a0: Math.floor(Math.random() * 1000) + 200,
       total: 0
     })).map(data => ({
       ...data,
@@ -63,7 +75,16 @@ const Reports = () => {
 
   const xeroxTypeData = [
     { name: 'Black', value: currentData.reduce((sum, item) => sum + item.black, 0), color: '#6b7280' },
-    { name: 'White', value: currentData.reduce((sum, item) => sum + item.white, 0), color: '#f97316' }
+    { name: 'White', value: currentData.reduce((sum, item) => sum + item.white, 0), color: '#f97316' },
+    { name: 'Color', value: currentData.reduce((sum, item) => sum + item.color, 0), color: '#ef4444' }
+  ];
+
+  const paperSizeData = [
+    { name: 'A4', value: currentData.reduce((sum, item) => sum + item.a4, 0), color: '#3b82f6' },
+    { name: 'A3', value: currentData.reduce((sum, item) => sum + item.a3, 0), color: '#10b981' },
+    { name: 'A2', value: currentData.reduce((sum, item) => sum + item.a2, 0), color: '#f59e0b' },
+    { name: 'A1', value: currentData.reduce((sum, item) => sum + item.a1, 0), color: '#6366f1' },
+    { name: 'A0', value: currentData.reduce((sum, item) => sum + item.a0, 0), color: '#ec4899' }
   ];
 
   const totalRevenue = currentData.reduce((sum, item) => sum + item.total, 0);
@@ -239,6 +260,65 @@ const Reports = () => {
         </Card>
       </div>
 
+      {/* Additional Charts for Xerox Type and Paper Size */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Xerox Type Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Xerox Type Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={xeroxTypeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {xeroxTypeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`₹${value}`, 'Amount']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Paper Size Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Paper Size Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={paperSizeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {paperSizeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`₹${value}`, 'Amount']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Detailed Table */}
       <Card>
         <CardHeader>
@@ -252,8 +332,9 @@ const Reports = () => {
                   <TableHead>{reportType === "daily" ? "Date" : "Month"}</TableHead>
                   <TableHead>Cash Sales</TableHead>
                   <TableHead>PhonePe Sales</TableHead>
-                  <TableHead>Black Xerox</TableHead>
-                  <TableHead>White Xerox</TableHead>
+                  <TableHead>Black</TableHead>
+                  <TableHead>White</TableHead>
+                  <TableHead>Color</TableHead>
                   <TableHead>Total Revenue</TableHead>
                 </TableRow>
               </TableHeader>
@@ -267,7 +348,45 @@ const Reports = () => {
                     <TableCell>₹{row.phonepe}</TableCell>
                     <TableCell>₹{row.black}</TableCell>
                     <TableCell>₹{row.white}</TableCell>
+                    <TableCell>₹{row.color}</TableCell>
                     <TableCell className="font-semibold">₹{row.total}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Paper Size Report */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Paper Size Report</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{reportType === "daily" ? "Date" : "Month"}</TableHead>
+                  <TableHead>A4</TableHead>
+                  <TableHead>A3</TableHead>
+                  <TableHead>A2</TableHead>
+                  <TableHead>A1</TableHead>
+                  <TableHead>A0</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentData.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">
+                      {reportType === "daily" ? row.date : row.month}
+                    </TableCell>
+                    <TableCell>₹{row.a4}</TableCell>
+                    <TableCell>₹{row.a3}</TableCell>
+                    <TableCell>₹{row.a2}</TableCell>
+                    <TableCell>₹{row.a1}</TableCell>
+                    <TableCell>₹{row.a0}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -280,3 +399,4 @@ const Reports = () => {
 };
 
 export default Reports;
+
