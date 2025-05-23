@@ -22,7 +22,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
     if (username === "admin" && password === "admin123") {
       toast({
         title: "Login Successful",
-        description: "Welcome to Sri Murali Krishna Computers!",
+        description: "Welcome to Vaishnavi Jumbo!",
       });
       onLogin();
     } else {
@@ -40,9 +40,9 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-blue-900 mb-2">
-            Sri Murali Krishna Computers
+            Vaishnavi Jumbo
           </h1>
-          <p className="text-lg text-blue-700">Vaishnavi Jumbo Zerox Shop</p>
+          <p className="text-lg text-blue-700">Powered by Sri Murali Krishna Computers</p>
           <p className="text-sm text-gray-600 mt-2">Cash Register System</p>
         </div>
 

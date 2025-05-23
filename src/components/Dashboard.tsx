@@ -21,8 +21,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Sri Murali Krishna Computers</h1>
-              <p className="text-blue-100">Vaishnavi Jumbo Zerox Shop - Cash Register</p>
+              <h1 className="text-2xl font-bold">Vaishnavi Jumbo</h1>
+              <p className="text-blue-100 text-sm">Powered by Sri Murali Krishna Computers - Cash Register</p>
             </div>
             <Button 
               onClick={onLogout}
