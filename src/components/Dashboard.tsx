@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, FileText, BarChart3 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import DayBook from "./DayBook";
 import Reports from "./Reports";
 
-interface DashboardProps {
-  onLogout: () => void;
-}
-
-const Dashboard = ({ onLogout }: DashboardProps) => {
+const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("daybook");
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -25,7 +27,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <p className="text-blue-100 text-sm">Powered by Sri Murali Krishna Computers - Cash Register</p>
             </div>
             <Button 
-              onClick={onLogout}
+              onClick={handleLogout}
               variant="outline"
               className="text-blue-600 border-white hover:bg-white"
             >

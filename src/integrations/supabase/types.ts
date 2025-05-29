@@ -9,7 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          business_name: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_name?: string | null
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_name?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          cost: number
+          created_at: string
+          date: string
+          estimation: number
+          final_cost: number
+          id: string
+          paper_size: Database["public"]["Enums"]["paper_size"]
+          quantity: number
+          sales_type: Database["public"]["Enums"]["sales_type"]
+          time: string
+          updated_at: string
+          user_id: string
+          xerox_type: Database["public"]["Enums"]["xerox_type"]
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          date?: string
+          estimation?: number
+          final_cost: number
+          id?: string
+          paper_size: Database["public"]["Enums"]["paper_size"]
+          quantity: number
+          sales_type: Database["public"]["Enums"]["sales_type"]
+          time?: string
+          updated_at?: string
+          user_id: string
+          xerox_type: Database["public"]["Enums"]["xerox_type"]
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          date?: string
+          estimation?: number
+          final_cost?: number
+          id?: string
+          paper_size?: Database["public"]["Enums"]["paper_size"]
+          quantity?: number
+          sales_type?: Database["public"]["Enums"]["sales_type"]
+          time?: string
+          updated_at?: string
+          user_id?: string
+          xerox_type?: Database["public"]["Enums"]["xerox_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +92,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      paper_size: "A4" | "A3" | "A2" | "A1" | "A0"
+      sales_type: "Cash" | "PhonePe"
+      xerox_type: "Black" | "White" | "Color"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +209,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      paper_size: ["A4", "A3", "A2", "A1", "A0"],
+      sales_type: ["Cash", "PhonePe"],
+      xerox_type: ["Black", "White", "Color"],
+    },
   },
 } as const
