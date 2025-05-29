@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Mail, CheckCircle } from "lucide-react";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
@@ -14,6 +15,8 @@ const AuthPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState("");
   const { toast } = useToast();
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -27,11 +30,21 @@ const AuthPage = () => {
       });
 
       if (error) {
-        toast({
-          title: "Login Failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        if (error.message.includes("email_not_confirmed") || error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email Not Confirmed",
+            description: "Please check your email and click the confirmation link before signing in.",
+            variant: "destructive",
+          });
+          setShowConfirmation(true);
+          setConfirmationEmail(email);
+        } else {
+          toast({
+            title: "Login Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Login Successful",
@@ -72,9 +85,11 @@ const AuthPage = () => {
           variant: "destructive",
         });
       } else {
+        setShowConfirmation(true);
+        setConfirmationEmail(email);
         toast({
           title: "Account Created",
-          description: "Your account has been created successfully!",
+          description: "Please check your email and click the confirmation link to activate your account.",
         });
       }
     } catch (error) {
@@ -87,6 +102,100 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
+
+  const handleResendConfirmation = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: confirmationEmail,
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Confirmation Email Sent",
+          description: "Please check your email for the confirmation link.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend confirmation email",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-blue-900 mb-2">
+              Vaishnavi Jumbo Zerox
+            </h1>
+            <p className="text-lg text-blue-700">Powered by Sri Murali Krishna Computers</p>
+            <p className="text-sm text-gray-600 mt-2">Cash Register System</p>
+          </div>
+
+          {/* Confirmation Card */}
+          <Card className="shadow-xl border-0">
+            <CardHeader className="bg-blue-600 text-white rounded-t-lg text-center">
+              <div className="flex justify-center mb-4">
+                <Mail className="w-16 h-16 text-blue-100" />
+              </div>
+              <CardTitle className="text-xl">Check Your Email</CardTitle>
+              <CardDescription className="text-blue-100">
+                We've sent a confirmation link to your email
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 text-center">
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <CheckCircle className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-700">
+                    Please check your email at <strong>{confirmationEmail}</strong> and click the confirmation link to activate your account.
+                  </p>
+                </div>
+                
+                <div className="text-sm text-gray-600">
+                  <p>After confirming your email, you can return here to sign in.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Button 
+                    onClick={handleResendConfirmation}
+                    variant="outline"
+                    className="w-full"
+                    disabled={loading}
+                  >
+                    {loading ? "Sending..." : "Resend Confirmation Email"}
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => setShowConfirmation(false)}
+                    variant="ghost"
+                    className="w-full"
+                  >
+                    Back to Sign In
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

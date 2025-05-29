@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -28,11 +29,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session);
+        
+        if (event === 'SIGNED_IN' && session) {
+          toast({
+            title: "Welcome!",
+            description: "You have successfully signed in.",
+          });
+        }
+        
+        if (event === 'SIGNED_OUT') {
+          toast({
+            title: "Signed Out",
+            description: "You have been signed out successfully.",
+          });
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -47,7 +65,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
