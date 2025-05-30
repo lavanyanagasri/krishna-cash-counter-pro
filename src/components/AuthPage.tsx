@@ -62,7 +62,6 @@ const AuthPage = () => {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: undefined,
         },
       });
 
@@ -75,7 +74,7 @@ const AuthPage = () => {
       } else {
         toast({
           title: "Account Created Successfully",
-          description: "You can now start using Vaishnavi Jumbo Zerox!",
+          description: "Welcome to Vaishnavi Jumbo Zerox! You can now start using the app.",
         });
       }
     } catch (error) {
@@ -113,7 +112,7 @@ const AuthPage = () => {
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signup">Create Account</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
