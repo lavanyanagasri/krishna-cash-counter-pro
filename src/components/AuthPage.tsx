@@ -21,7 +21,7 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -32,12 +32,8 @@ const AuthPage = () => {
           description: error.message,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Login Successful",
-          description: "Welcome to Vaishnavi Jumbo Zerox!",
-        });
       }
+      // Success handled by auth state change listener
     } catch (error) {
       toast({
         title: "Error",
@@ -54,10 +50,11 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: window.location.origin,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -71,10 +68,10 @@ const AuthPage = () => {
           description: error.message,
           variant: "destructive",
         });
-      } else {
+      } else if (data.user) {
         toast({
           title: "Account Created Successfully",
-          description: "Welcome to Vaishnavi Jumbo Zerox! You can now start using the app.",
+          description: "You are now logged in and can start using the app.",
         });
       }
     } catch (error) {
