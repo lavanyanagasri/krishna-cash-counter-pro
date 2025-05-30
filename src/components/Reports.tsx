@@ -1,71 +1,107 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Calendar, TrendingUp, DollarSign, FileText } from "lucide-react";
+import { useTransactions } from "@/hooks/useTransactions";
 
 const Reports = () => {
   const [reportType, setReportType] = useState("daily");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth().toString());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const { transactions } = useTransactions();
 
-  // Mock data for demonstration
-  const generateMockData = () => {
-    const dailyData = Array.from({ length: 7 }, (_, i) => {
+  // Process transactions for daily report (last 7 days)
+  const dailyData = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      return {
-        date: date.toLocaleDateString('en-IN'),
-        cash: Math.floor(Math.random() * 500) + 100,
-        phonepe: Math.floor(Math.random() * 300) + 50,
-        black: Math.floor(Math.random() * 200) + 50,
-        white: Math.floor(Math.random() * 150) + 30,
-        color: Math.floor(Math.random() * 250) + 75,
-        a4: Math.floor(Math.random() * 300) + 100,
-        a3: Math.floor(Math.random() * 200) + 50,
-        a2: Math.floor(Math.random() * 150) + 30,
-        a1: Math.floor(Math.random() * 100) + 20,
-        a0: Math.floor(Math.random() * 50) + 10,
-        total: 0
-      };
+      return date.toISOString().split('T')[0];
     }).reverse();
 
-    dailyData.forEach(day => {
-      day.total = day.cash + day.phonepe;
+    return last7Days.map(date => {
+      const dayTransactions = transactions.filter(t => t.date === date);
+      
+      const cashTotal = dayTransactions
+        .filter(t => t.sales_type === 'Cash')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const phonepeTotal = dayTransactions
+        .filter(t => t.sales_type === 'PhonePe')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      const blackTotal = dayTransactions
+        .filter(t => t.xerox_type === 'Black')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      const whiteTotal = dayTransactions
+        .filter(t => t.xerox_type === 'White')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      const colorTotal = dayTransactions
+        .filter(t => t.xerox_type === 'Color')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      return {
+        date: new Date(date).toLocaleDateString('en-IN'),
+        cash: cashTotal,
+        phonepe: phonepeTotal,
+        black: blackTotal,
+        white: whiteTotal,
+        color: colorTotal,
+        total: cashTotal + phonepeTotal
+      };
     });
+  }, [transactions]);
 
-    return dailyData;
-  };
-
-  const generateMonthlyData = () => {
+  // Process transactions for monthly report
+  const monthlyData = useMemo(() => {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     
-    return months.map(month => ({
-      month,
-      cash: Math.floor(Math.random() * 15000) + 5000,
-      phonepe: Math.floor(Math.random() * 10000) + 3000,
-      black: Math.floor(Math.random() * 8000) + 2000,
-      white: Math.floor(Math.random() * 5000) + 1000,
-      color: Math.floor(Math.random() * 7000) + 3000,
-      a4: Math.floor(Math.random() * 10000) + 5000,
-      a3: Math.floor(Math.random() * 7000) + 2000,
-      a2: Math.floor(Math.random() * 5000) + 1000,
-      a1: Math.floor(Math.random() * 3000) + 500,
-      a0: Math.floor(Math.random() * 1000) + 200,
-      total: 0
-    })).map(data => ({
-      ...data,
-      total: data.cash + data.phonepe
-    }));
-  };
+    return months.map((month, index) => {
+      const monthTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.getMonth() === index && 
+               transactionDate.getFullYear() === parseInt(selectedYear);
+      });
+      
+      const cashTotal = monthTransactions
+        .filter(t => t.sales_type === 'Cash')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const phonepeTotal = monthTransactions
+        .filter(t => t.sales_type === 'PhonePe')
+        .reduce((sum, t) => sum + t.final_cost, 0);
 
-  const dailyData = generateMockData();
-  const monthlyData = generateMonthlyData();
+      const blackTotal = monthTransactions
+        .filter(t => t.xerox_type === 'Black')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      const whiteTotal = monthTransactions
+        .filter(t => t.xerox_type === 'White')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      const colorTotal = monthTransactions
+        .filter(t => t.xerox_type === 'Color')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+
+      return {
+        month,
+        cash: cashTotal,
+        phonepe: phonepeTotal,
+        black: blackTotal,
+        white: whiteTotal,
+        color: colorTotal,
+        total: cashTotal + phonepeTotal
+      };
+    });
+  }, [transactions, selectedYear]);
+
   const currentData = reportType === "daily" ? dailyData : monthlyData;
 
   const salesTypeData = [
@@ -79,17 +115,21 @@ const Reports = () => {
     { name: 'Color', value: currentData.reduce((sum, item) => sum + item.color, 0), color: '#ef4444' }
   ];
 
-  const paperSizeData = [
-    { name: 'A4', value: currentData.reduce((sum, item) => sum + item.a4, 0), color: '#3b82f6' },
-    { name: 'A3', value: currentData.reduce((sum, item) => sum + item.a3, 0), color: '#10b981' },
-    { name: 'A2', value: currentData.reduce((sum, item) => sum + item.a2, 0), color: '#f59e0b' },
-    { name: 'A1', value: currentData.reduce((sum, item) => sum + item.a1, 0), color: '#6366f1' },
-    { name: 'A0', value: currentData.reduce((sum, item) => sum + item.a0, 0), color: '#ec4899' }
-  ];
-
   const totalRevenue = currentData.reduce((sum, item) => sum + item.total, 0);
-  const totalTransactions = currentData.length * Math.floor(Math.random() * 20) + 50;
-  const averageTransaction = totalRevenue / totalTransactions;
+  const totalTransactions = transactions.filter(t => {
+    if (reportType === "daily") {
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        return date.toISOString().split('T')[0];
+      });
+      return last7Days.includes(t.date);
+    } else {
+      const transactionDate = new Date(t.date);
+      return transactionDate.getFullYear() === parseInt(selectedYear);
+    }
+  }).length;
+  const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
   return (
     <div className="space-y-6">
@@ -117,36 +157,19 @@ const Reports = () => {
             </div>
 
             {reportType === "monthly" && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Month</label>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i} value={i.toString()}>
-                          {new Date(2024, i, 1).toLocaleString('default', { month: 'long' })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Year</label>
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024">2024</SelectItem>
-                      <SelectItem value="2023">2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Year</label>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024">2024</SelectItem>
+                    <SelectItem value="2023">2023</SelectItem>
+                    <SelectItem value="2025">2025</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
         </CardContent>
@@ -258,10 +281,7 @@ const Reports = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Additional Charts for Xerox Type and Paper Size */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Xerox Type Distribution */}
         <Card>
           <CardHeader>
@@ -281,34 +301,6 @@ const Reports = () => {
                   dataKey="value"
                 >
                   {xeroxTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`₹${value}`, 'Amount']} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Paper Size Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Paper Size Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={paperSizeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {paperSizeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -357,46 +349,8 @@ const Reports = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Paper Size Report */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Paper Size Report</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{reportType === "daily" ? "Date" : "Month"}</TableHead>
-                  <TableHead>A4</TableHead>
-                  <TableHead>A3</TableHead>
-                  <TableHead>A2</TableHead>
-                  <TableHead>A1</TableHead>
-                  <TableHead>A0</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentData.map((row, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">
-                      {reportType === "daily" ? row.date : row.month}
-                    </TableCell>
-                    <TableCell>₹{row.a4}</TableCell>
-                    <TableCell>₹{row.a3}</TableCell>
-                    <TableCell>₹{row.a2}</TableCell>
-                    <TableCell>₹{row.a1}</TableCell>
-                    <TableCell>₹{row.a0}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
 
 export default Reports;
-
