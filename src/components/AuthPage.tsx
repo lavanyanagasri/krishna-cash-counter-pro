@@ -11,12 +11,62 @@ import { supabase } from "@/integrations/supabase/client";
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Fixed admin credentials
+    if (email === "admin@vaishnavi.com" && password === "admin123") {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: "admin@vaishnavi.com",
+          password: "admin123",
+        });
+
+        if (error) {
+          // If admin user doesn't exist in Supabase, create it
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: "admin@vaishnavi.com",
+            password: "admin123",
+            options: {
+              data: {
+                first_name: "Admin",
+                last_name: "User",
+                role: "admin"
+              },
+            },
+          });
+          
+          if (signUpError) {
+            toast({
+              title: "Admin Login Failed",
+              description: signUpError.message,
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Invalid Admin Credentials",
+        description: "Please check your admin credentials",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
+  };
+
+  const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -28,50 +78,9 @@ const AuthPage = () => {
 
       if (error) {
         toast({
-          title: "Login Failed",
+          title: "User Login Failed",
           description: error.message,
           variant: "destructive",
-        });
-      }
-      // Success handled by auth state change listener
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
-        },
-      });
-
-      if (error) {
-        toast({
-          title: "Sign Up Failed", 
-          description: error.message,
-          variant: "destructive",
-        });
-      } else if (data.user) {
-        toast({
-          title: "Account Created Successfully",
-          description: "You are now logged in and can start using the app.",
         });
       }
     } catch (error) {
@@ -100,24 +109,24 @@ const AuthPage = () => {
         {/* Auth Card */}
         <Card className="shadow-xl border-0">
           <CardHeader className="bg-blue-600 text-white rounded-t-lg">
-            <CardTitle className="text-xl text-center">Authentication</CardTitle>
+            <CardTitle className="text-xl text-center">Login</CardTitle>
             <CardDescription className="text-blue-100 text-center">
-              Sign in to your account or create a new one
+              Sign in to your account
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue="user" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Create Account</TabsTrigger>
+                <TabsTrigger value="user">User Login</TabsTrigger>
+                <TabsTrigger value="admin">Admin Login</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
+              <TabsContent value="user">
+                <form onSubmit={handleUserLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="user-email">Email</Label>
                     <Input
-                      id="signin-email"
+                      id="user-email"
                       type="email"
                       placeholder="Enter your email"
                       value={email}
@@ -126,9 +135,9 @@ const AuthPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="user-password">Password</Label>
                     <Input
-                      id="signin-password"
+                      id="user-password"
                       type="password"
                       placeholder="Enter your password"
                       value={password}
@@ -141,68 +150,48 @@ const AuthPage = () => {
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={loading}
                   >
-                    {loading ? "Signing In..." : "Sign In"}
+                    {loading ? "Signing In..." : "Sign In as User"}
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first-name">First Name</Label>
-                      <Input
-                        id="first-name"
-                        type="text"
-                        placeholder="First name"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="last-name">Last Name</Label>
-                      <Input
-                        id="last-name"
-                        type="text"
-                        placeholder="Last name"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
+              <TabsContent value="admin">
+                <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="admin-email">Admin Email</Label>
                     <Input
-                      id="signup-email"
+                      id="admin-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="admin@vaishnavi.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="admin-password">Admin Password</Label>
                     <Input
-                      id="signup-password"
+                      id="admin-password"
                       type="password"
-                      placeholder="Create a password"
+                      placeholder="Enter admin password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      minLength={6}
                     />
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-red-600 hover:bg-red-700"
                     disabled={loading}
                   >
-                    {loading ? "Creating Account..." : "Create Account"}
+                    {loading ? "Signing In..." : "Sign In as Admin"}
                   </Button>
                 </form>
+                <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
+                  <p><strong>Admin Credentials:</strong></p>
+                  <p>Email: admin@vaishnavi.com</p>
+                  <p>Password: admin123</p>
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>
