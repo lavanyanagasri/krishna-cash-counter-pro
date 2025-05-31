@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
@@ -18,32 +17,23 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Only allow admin@vaishnavi.com with admin123 password
+    // Simple hardcoded authentication - no Supabase involved
     if (email === "admin@vaishnavi.com" && password === "admin123") {
-      try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: "admin@vaishnavi.com",
-          password: "admin123",
-        });
-
-        if (error) {
-          toast({
-            title: "Login Failed",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred",
-          variant: "destructive",
-        });
-      }
+      // Store auth state in localStorage
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userEmail', email);
+      
+      // Trigger a storage event to update auth state
+      window.dispatchEvent(new Event('storage'));
+      
+      toast({
+        title: "Login Successful",
+        description: "Welcome to Vaishnavi Jumbo Zerox",
+      });
     } else {
       toast({
         title: "Invalid Credentials",
-        description: "Please use admin@vaishnavi.com with the correct password",
+        description: "Please use admin@vaishnavi.com with password admin123",
         variant: "destructive",
       });
     }

@@ -1,11 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { useProfile } from './useProfile';
 
 export const useAdmin = () => {
   const { user } = useAuth();
-  const { profile } = useProfile();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -14,7 +12,7 @@ export const useAdmin = () => {
     } else {
       setIsAdmin(false);
     }
-  }, [user, profile]);
+  }, [user]);
 
   return { isAdmin };
 };

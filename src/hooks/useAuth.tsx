@@ -1,12 +1,10 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: { email: string } | null;
+  session: { user: { email: string } } | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -26,49 +24,53 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [session, setSession] = useState<{ user: { email: string } } | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (event === 'SIGNED_IN' && session) {
-          toast({
-            title: "Welcome!",
-            description: "You have successfully signed in.",
-          });
-        }
-        
-        if (event === 'SIGNED_OUT') {
-          toast({
-            title: "Signed Out",
-            description: "You have been signed out successfully.",
-          });
-        }
-
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    // Check if user is authenticated from localStorage
+    const checkAuth = () => {
+      const isAuthenticated = localStorage.getItem('isAuthenticated');
+      const userEmail = localStorage.getItem('userEmail');
+      
+      if (isAuthenticated === 'true' && userEmail) {
+        const userData = { email: userEmail };
+        setUser(userData);
+        setSession({ user: userData });
+      } else {
+        setUser(null);
+        setSession(null);
       }
-    );
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
       setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
-  }, [toast]);
+    // Check auth on mount
+    checkAuth();
+
+    // Listen for storage changes (when login happens)
+    const handleStorageChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
+    setUser(null);
+    setSession(null);
+    
+    toast({
+      title: "Signed Out",
+      description: "You have been signed out successfully.",
+    });
   };
 
   const value = {
