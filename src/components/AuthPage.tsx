@@ -17,28 +17,52 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Simple hardcoded authentication - no Supabase involved
-    if (email === "admin@vaishnavi.com" && password === "admin123") {
-      // Store auth state in localStorage
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
-      
-      // Trigger a storage event to update auth state
-      window.dispatchEvent(new Event('storage'));
-      
+    try {
+      // Check admin credentials first
+      if (email === "admin@vaishnavi.com" && password === "admin123") {
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userEmail', email);
+        
+        window.dispatchEvent(new Event('storage'));
+        
+        toast({
+          title: "Admin Login Successful",
+          description: "Welcome to Vaishnavi Jumbo Zerox - Admin Panel",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Check registered users
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const user = registeredUsers.find((user: any) => user.email === email && user.password === password);
+
+      if (user) {
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userEmail', email);
+        
+        window.dispatchEvent(new Event('storage'));
+        
+        toast({
+          title: "Login Successful",
+          description: "Welcome to Vaishnavi Jumbo Zerox",
+        });
+      } else {
+        toast({
+          title: "Invalid Credentials",
+          description: "Please check your email and password or contact admin",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Login Successful",
-        description: "Welcome to Vaishnavi Jumbo Zerox",
-      });
-    } else {
-      toast({
-        title: "Invalid Credentials",
-        description: "Please use admin@vaishnavi.com with password admin123",
+        title: "Login Error",
+        description: "An error occurred during login",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
@@ -75,7 +99,7 @@ const AuthPage = () => {
                     <Input
                       id="user-email"
                       type="email"
-                      placeholder="admin@vaishnavi.com"
+                      placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -100,6 +124,9 @@ const AuthPage = () => {
                     {loading ? "Signing In..." : "Sign In as User"}
                   </Button>
                 </form>
+                <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
+                  <p><strong>Note:</strong> User accounts are created by admin</p>
+                </div>
               </TabsContent>
 
               <TabsContent value="admin">
@@ -135,7 +162,7 @@ const AuthPage = () => {
                   </Button>
                 </form>
                 <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
-                  <p><strong>Credentials:</strong></p>
+                  <p><strong>Admin Credentials:</strong></p>
                   <p>Email: admin@vaishnavi.com</p>
                   <p>Password: admin123</p>
                 </div>
