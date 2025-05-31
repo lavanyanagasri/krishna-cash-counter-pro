@@ -14,11 +14,11 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Fixed admin credentials - direct login without confirmation
+    // Only allow admin@vaishnavi.com with admin123 password
     if (email === "admin@vaishnavi.com" && password === "admin123") {
       try {
         const { error } = await supabase.auth.signInWithPassword({
@@ -28,7 +28,7 @@ const AuthPage = () => {
 
         if (error) {
           toast({
-            title: "Admin Login Failed",
+            title: "Login Failed",
             description: error.message,
             variant: "destructive",
           });
@@ -42,41 +42,13 @@ const AuthPage = () => {
       }
     } else {
       toast({
-        title: "Invalid Admin Credentials",
-        description: "Please check your admin credentials",
+        title: "Invalid Credentials",
+        description: "Please use admin@vaishnavi.com with the correct password",
         variant: "destructive",
       });
     }
     
     setLoading(false);
-  };
-
-  const handleUserLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast({
-          title: "User Login Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -107,13 +79,13 @@ const AuthPage = () => {
               </TabsList>
 
               <TabsContent value="user">
-                <form onSubmit={handleUserLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="user-email">Email</Label>
                     <Input
                       id="user-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="admin@vaishnavi.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -141,7 +113,7 @@ const AuthPage = () => {
               </TabsContent>
 
               <TabsContent value="admin">
-                <form onSubmit={handleAdminLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="admin-email">Admin Email</Label>
                     <Input
@@ -173,7 +145,7 @@ const AuthPage = () => {
                   </Button>
                 </form>
                 <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
-                  <p><strong>Admin Credentials:</strong></p>
+                  <p><strong>Credentials:</strong></p>
                   <p>Email: admin@vaishnavi.com</p>
                   <p>Password: admin123</p>
                 </div>
