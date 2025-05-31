@@ -43,7 +43,13 @@ const DayBook = () => {
     const est = parseFloat(estimation) || 0;
     const finalCost = Math.max(0, cost - est);
 
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS format
+
     addTransaction({
+      date: currentDate,
+      time: currentTime,
       sales_type: salesType,
       xerox_type: xeroxType,
       paper_size: paperSize,
