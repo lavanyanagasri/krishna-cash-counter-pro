@@ -18,35 +18,20 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Fixed admin credentials
+    // Fixed admin credentials - direct login without confirmation
     if (email === "admin@vaishnavi.com" && password === "admin123") {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email: "admin@vaishnavi.com",
           password: "admin123",
         });
 
         if (error) {
-          // If admin user doesn't exist in Supabase, create it
-          const { error: signUpError } = await supabase.auth.signUp({
-            email: "admin@vaishnavi.com",
-            password: "admin123",
-            options: {
-              data: {
-                first_name: "Admin",
-                last_name: "User",
-                role: "admin"
-              },
-            },
+          toast({
+            title: "Admin Login Failed",
+            description: error.message,
+            variant: "destructive",
           });
-          
-          if (signUpError) {
-            toast({
-              title: "Admin Login Failed",
-              description: signUpError.message,
-              variant: "destructive",
-            });
-          }
         }
       } catch (error) {
         toast({
@@ -71,7 +56,7 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
