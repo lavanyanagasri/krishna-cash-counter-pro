@@ -1,72 +1,77 @@
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Profile = Database['public']['Tables']['profiles']['Row'];
-type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+type Profile = {
+  first_name: string;
+  last_name: string;
+  business_name: string;
+  phone: string;
+  address: string;
+  avatar_url?: string;
+};
+
+type ProfileUpdate = Partial<Profile>;
 
 export const useProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch user profile
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
+  useEffect(() => {
+    if (user) {
+      // Load profile from localStorage or set default
+      const savedProfile = localStorage.getItem('userProfile');
+      if (savedProfile) {
+        setProfile(JSON.parse(savedProfile));
+      } else {
+        // Set default profile for admin
+        const defaultProfile: Profile = {
+          first_name: 'Admin',
+          last_name: 'User',
+          business_name: 'Vaishnavi Jumbo Zerox',
+          phone: '',
+          address: '',
+        };
+        setProfile(defaultProfile);
+        localStorage.setItem('userProfile', JSON.stringify(defaultProfile));
+      }
+    } else {
+      setProfile(null);
+    }
+  }, [user]);
+
+  const updateProfile = (updates: ProfileUpdate) => {
+    if (!user) return;
+
+    setIsLoading(true);
+    
+    try {
+      const updatedProfile = { ...profile, ...updates } as Profile;
+      setProfile(updatedProfile);
+      localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  // Update profile mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: async (updates: Omit<ProfileUpdate, 'id'>) => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update profile: " + error.message,
+        description: "Failed to update profile",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     profile,
     isLoading,
-    updateProfile: updateProfileMutation.mutate,
-    isUpdatingProfile: updateProfileMutation.isPending,
+    updateProfile,
+    isUpdatingProfile: isLoading,
   };
 };

@@ -1,101 +1,108 @@
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Transaction = Database['public']['Tables']['transactions']['Row'];
-type TransactionInsert = Database['public']['Tables']['transactions']['Insert'];
+type Transaction = {
+  id: string;
+  date: string;
+  time: string;
+  sales_type: string;
+  xerox_type: string;
+  paper_size: string;
+  quantity: number;
+  cost: number;
+  estimation: number;
+  final_cost: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type TransactionInsert = Omit<Transaction, 'id' | 'created_at' | 'updated_at'>;
 
 export const useTransactions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
 
-  // Fetch transactions
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ['transactions', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
+  useEffect(() => {
+    if (user) {
+      // Load transactions from localStorage
+      const savedTransactions = localStorage.getItem('transactions');
+      if (savedTransactions) {
+        setTransactions(JSON.parse(savedTransactions));
+      }
+    } else {
+      setTransactions([]);
+    }
+  }, [user]);
+
+  const addTransaction = (transaction: TransactionInsert) => {
+    if (!user) return;
+
+    setIsAddingTransaction(true);
+    
+    try {
+      const newTransaction: Transaction = {
+        ...transaction,
+        id: Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const updatedTransactions = [newTransaction, ...transactions];
+      setTransactions(updatedTransactions);
+      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
       
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  // Add transaction mutation
-  const addTransactionMutation = useMutation({
-    mutationFn: async (transaction: Omit<TransactionInsert, 'user_id'>) => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert({
-          ...transaction,
-          user_id: user.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast({
         title: "Transaction Added",
         description: "Transaction recorded successfully",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to add transaction: " + error.message,
+        description: "Failed to add transaction",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsAddingTransaction(false);
+    }
+  };
 
-  // Delete transaction mutation
-  const deleteTransactionMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id);
+  const deleteTransaction = (id: string) => {
+    if (!user) return;
 
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    setIsDeletingTransaction(true);
+    
+    try {
+      const updatedTransactions = transactions.filter(t => t.id !== id);
+      setTransactions(updatedTransactions);
+      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+      
       toast({
         title: "Transaction Deleted",
         description: "Transaction removed successfully",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete transaction: " + error.message,
+        description: "Failed to delete transaction",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsDeletingTransaction(false);
+    }
+  };
 
   return {
     transactions,
     isLoading,
-    addTransaction: addTransactionMutation.mutate,
-    deleteTransaction: deleteTransactionMutation.mutate,
-    isAddingTransaction: addTransactionMutation.isPending,
-    isDeletingTransaction: deleteTransactionMutation.isPending,
+    addTransaction,
+    deleteTransaction,
+    isAddingTransaction,
+    isDeletingTransaction,
   };
 };
