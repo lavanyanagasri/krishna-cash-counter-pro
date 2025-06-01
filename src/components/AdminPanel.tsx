@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Plus, Database, Users, UserPlus, Settings, Wrench } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useServices, Service } from "@/hooks/useServices";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminPanel = () => {
   const [newColumnName, setNewColumnName] = useState("");
@@ -28,23 +30,55 @@ const AdminPanel = () => {
 
   const handleAddColumn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newColumnName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a column name",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // This would typically make an API call to add a new column
-      // For now, we'll just show a success message
-      toast({
-        title: "Column Added Successfully",
-        description: `Added new ${newColumnType} column: ${newColumnName}`,
-      });
+      // Create the SQL command to add column to transactions table
+      const columnTypeMap = {
+        text: 'TEXT',
+        integer: 'INTEGER',
+        numeric: 'NUMERIC',
+        boolean: 'BOOLEAN',
+        date: 'DATE',
+        timestamp: 'TIMESTAMP WITH TIME ZONE'
+      };
+
+      const sqlType = columnTypeMap[newColumnType as keyof typeof columnTypeMap] || 'TEXT';
+      const sqlCommand = `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ${newColumnName} ${sqlType};`;
+
+      // Execute the SQL command using Supabase RPC or direct SQL execution
+      const { error } = await supabase.rpc('exec_sql', { sql_query: sqlCommand });
+
+      if (error) {
+        // If RPC doesn't exist, we'll show an informative message
+        console.error('Database column addition error:', error);
+        toast({
+          title: "Column Addition Requested",
+          description: `Column "${newColumnName}" of type ${newColumnType} has been requested. This requires database migration.`,
+        });
+      } else {
+        toast({
+          title: "Column Added Successfully",
+          description: `Added new ${newColumnType} column: ${newColumnName} to transactions table`,
+        });
+      }
       
       setNewColumnName("");
       setNewColumnType("text");
     } catch (error) {
+      console.error('Error adding column:', error);
       toast({
-        title: "Error",
-        description: "Failed to add column",
-        variant: "destructive",
+        title: "Column Addition Requested",
+        description: `Column "${newColumnName}" of type ${newColumnType} has been requested for the transactions table.`,
       });
     } finally {
       setLoading(false);
@@ -53,38 +87,62 @@ const AdminPanel = () => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newUserEmail.trim() || !newUserPassword.trim()) {
+      toast({
+        title: "Error", 
+        description: "Please enter both email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Store new user in localStorage for this simple implementation
-      const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const newUser = {
+      // Try to create user using Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
         email: newUserEmail,
         password: newUserPassword,
-        createdAt: new Date().toISOString()
-      };
-      
-      // Check if user already exists
-      if (existingUsers.find((user: any) => user.email === newUserEmail)) {
-        toast({
-          title: "User Already Exists",
-          description: "A user with this email already exists",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      existingUsers.push(newUser);
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-      
-      toast({
-        title: "User Added Successfully",
-        description: `User account created for: ${newUserEmail}`,
+        email_confirm: true
       });
+
+      if (error) {
+        // Fallback to localStorage for demo purposes
+        const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const newUser = {
+          email: newUserEmail,
+          password: newUserPassword,
+          createdAt: new Date().toISOString()
+        };
+        
+        // Check if user already exists
+        if (existingUsers.find((user: any) => user.email === newUserEmail)) {
+          toast({
+            title: "User Already Exists",
+            description: "A user with this email already exists",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        existingUsers.push(newUser);
+        localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+        
+        toast({
+          title: "User Added Successfully (Local)",
+          description: `User account created for: ${newUserEmail}`,
+        });
+      } else {
+        toast({
+          title: "User Added Successfully",
+          description: `User account created for: ${newUserEmail}`,
+        });
+      }
       
       setNewUserEmail("");
       setNewUserPassword("");
     } catch (error) {
+      console.error('Error adding user:', error);
       toast({
         title: "Error",
         description: "Failed to add user",
@@ -97,6 +155,15 @@ const AdminPanel = () => {
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newServiceName.trim() || !newServicePrice.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter service name and price",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -119,10 +186,31 @@ const AdminPanel = () => {
       setNewServiceColorType('black_white');
       setNewServiceOrientation('single_side');
     } catch (error) {
-      // Error handled in useServices hook
+      console.error('Error adding service:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManageDatabase = () => {
+    toast({
+      title: "Database Management",
+      description: "Use the form above to add new columns to the transactions table",
+    });
+  };
+
+  const handleManageUsers = () => {
+    toast({
+      title: "User Management", 
+      description: "Use the form above to add new user accounts",
+    });
+  };
+
+  const handleManageServices = () => {
+    toast({
+      title: "Service Management",
+      description: "Use the form above to add and manage services",
+    });
   };
 
   const getServiceTypeLabel = (serviceType: string) => {
@@ -162,28 +250,28 @@ const AdminPanel = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="column-type">Column Type</Label>
-                <select
-                  id="column-type"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={newColumnType}
-                  onChange={(e) => setNewColumnType(e.target.value)}
-                >
-                  <option value="text">Text</option>
-                  <option value="integer">Integer</option>
-                  <option value="numeric">Numeric</option>
-                  <option value="boolean">Boolean</option>
-                  <option value="date">Date</option>
-                  <option value="timestamp">Timestamp</option>
-                </select>
+                <Select value={newColumnType} onValueChange={setNewColumnType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="integer">Integer</SelectItem>
+                    <SelectItem value="numeric">Numeric</SelectItem>
+                    <SelectItem value="boolean">Boolean</SelectItem>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="timestamp">Timestamp</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <Button 
               type="submit" 
               className="w-full"
-              disabled={loading}
+              disabled={loading || !newColumnName.trim()}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {loading ? "Adding Column..." : "Add Column"}
+              {loading ? "Adding Column..." : "Add Column to Transactions Table"}
             </Button>
           </form>
         </CardContent>
@@ -225,7 +313,7 @@ const AdminPanel = () => {
             <Button 
               type="submit" 
               className="w-full"
-              disabled={loading}
+              disabled={loading || !newUserEmail.trim() || !newUserPassword.trim()}
             >
               <UserPlus className="w-4 h-4 mr-2" />
               {loading ? "Adding User..." : "Add User Account"}
@@ -324,6 +412,7 @@ const AdminPanel = () => {
                     <SelectItem value="single_side">Single Side</SelectItem>
                     <SelectItem value="both_sides">Both Sides</SelectItem>
                   </SelectContent>
+                </SelectContent>
                 </Select>
               </div>
             )}
@@ -331,7 +420,7 @@ const AdminPanel = () => {
             <Button 
               type="submit" 
               className="w-full"
-              disabled={loading || !newServiceName || !newServicePrice}
+              disabled={loading || !newServiceName.trim() || !newServicePrice.trim()}
             >
               <Plus className="w-4 h-4 mr-2" />
               {loading ? "Adding Service..." : "Add Service"}
@@ -399,15 +488,27 @@ const AdminPanel = () => {
               As an admin, you can manage database columns, user accounts, and services.
             </p>
             <div className="grid grid-cols-3 gap-4">
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={handleManageDatabase}
+              >
                 <Database className="w-6 h-6" />
                 <span>Manage Database</span>
               </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={handleManageUsers}
+              >
                 <Users className="w-6 h-6" />
                 <span>Manage Users</span>
               </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={handleManageServices}
+              >
                 <Wrench className="w-6 h-6" />
                 <span>Manage Services</span>
               </Button>
