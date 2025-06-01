@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const AdminPanel = () => {
   const [newColumnName, setNewColumnName] = useState("");
-  const [newColumnType, setNewColumnType] = useState("text");
+  const [newColumnType, setNewColumnType] = useState<"text" | "integer" | "numeric" | "boolean" | "date" | "timestamp">("text");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,7 +42,7 @@ const AdminPanel = () => {
 
     try {
       // Create the SQL command to add column to transactions table
-      const columnTypeMap = {
+      const columnTypeMap: Record<typeof newColumnType, string> = {
         text: 'TEXT',
         integer: 'INTEGER',
         numeric: 'NUMERIC',
@@ -52,14 +51,15 @@ const AdminPanel = () => {
         timestamp: 'TIMESTAMP WITH TIME ZONE'
       };
 
-      const sqlType = columnTypeMap[newColumnType as keyof typeof columnTypeMap] || 'TEXT';
-      const sqlCommand = `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ${newColumnName} ${sqlType};`;
-
-      // Execute the SQL command using Supabase RPC or direct SQL execution
-      const { error } = await supabase.rpc('exec_sql', { sql_query: sqlCommand });
+      const sqlType = columnTypeMap[newColumnType];
+      
+      // Use Supabase SQL execution
+      const { error } = await supabase
+        .rpc('exec_sql', { 
+          sql_query: `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ${newColumnName} ${sqlType};`
+        });
 
       if (error) {
-        // If RPC doesn't exist, we'll show an informative message
         console.error('Database column addition error:', error);
         toast({
           title: "Column Addition Requested",
@@ -250,7 +250,7 @@ const AdminPanel = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="column-type">Column Type</Label>
-                <Select value={newColumnType} onValueChange={setNewColumnType}>
+                <Select value={newColumnType} onValueChange={(value: typeof newColumnType) => setNewColumnType(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
