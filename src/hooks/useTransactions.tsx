@@ -71,15 +71,26 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // Prepare the transaction data with proper user_id
+      // Prepare the transaction data with proper typing and user_id
       const transactionData = {
-        ...transaction,
-        user_id: user.id || 'anonymous'
+        user_id: user.id || 'anonymous',
+        date: transaction.date,
+        time: transaction.time,
+        sales_type: transaction.sales_type as 'Cash' | 'PhonePe',
+        xerox_type: transaction.xerox_type as 'Black' | 'White' | 'Color',
+        paper_size: transaction.paper_size as 'A4' | 'A3' | 'A2' | 'A1' | 'A0',
+        quantity: transaction.quantity,
+        cost: transaction.cost,
+        estimation: transaction.estimation,
+        final_cost: transaction.final_cost,
+        service_id: transaction.service_id,
+        service_type: transaction.service_type,
+        notes: transaction.notes
       };
 
       const { data, error } = await supabase
         .from('transactions')
-        .insert([transactionData])
+        .insert(transactionData)
         .select()
         .single();
 
