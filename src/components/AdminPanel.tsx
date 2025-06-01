@@ -412,7 +412,6 @@ const AdminPanel = () => {
                     <SelectItem value="single_side">Single Side</SelectItem>
                     <SelectItem value="both_sides">Both Sides</SelectItem>
                   </SelectContent>
-                </SelectContent>
                 </Select>
               </div>
             )}
