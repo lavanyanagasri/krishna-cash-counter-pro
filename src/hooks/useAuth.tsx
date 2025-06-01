@@ -2,9 +2,14 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
+interface User {
+  id?: string;
+  email: string;
+}
+
 interface AuthContextType {
-  user: { email: string } | null;
-  session: { user: { email: string } } | null;
+  user: User | null;
+  session: { user: User } | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -24,8 +29,8 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<{ email: string } | null>(null);
-  const [session, setSession] = useState<{ user: { email: string } } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<{ user: User } | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -36,7 +41,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userEmail = localStorage.getItem('userEmail');
       
       if (isAuthenticated === 'true' && userEmail) {
-        const userData = { email: userEmail };
+        const userData: User = { 
+          email: userEmail,
+          id: userEmail === 'admin@vaishnavi.com' ? 'admin' : 'user'
+        };
         setUser(userData);
         setSession({ user: userData });
       } else {

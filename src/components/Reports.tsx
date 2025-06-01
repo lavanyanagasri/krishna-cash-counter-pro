@@ -9,6 +9,20 @@ import { Calendar, TrendingUp, DollarSign, FileText, Printer } from "lucide-reac
 import { useTransactions } from "@/hooks/useTransactions";
 import { useServices } from "@/hooks/useServices";
 
+type ReportDataItem = {
+  date?: string;
+  month?: string;
+  cash: number;
+  phonepe: number;
+  total: number;
+  xerox: number;
+  scanning: number;
+  net_printing: number;
+  spiral_binding: number;
+  lamination: number;
+  rubber_stamps: number;
+};
+
 const Reports = () => {
   const [reportType, setReportType] = useState("daily");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
@@ -19,10 +33,6 @@ const Reports = () => {
     const printContent = document.getElementById('printable-report');
     if (!printContent) return;
 
-    const originalContents = document.body.innerHTML;
-    const printContents = printContent.innerHTML;
-
-    // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -108,7 +118,7 @@ const Reports = () => {
             <div class="company-subtitle">Powered by Sri Murali Krishna Computers</div>
             <div class="report-title">${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report - ${new Date().toLocaleDateString('en-IN')}</div>
           </div>
-          ${printContents}
+          ${printContent.innerHTML}
         </body>
       </html>
     `);
@@ -120,7 +130,7 @@ const Reports = () => {
   };
 
   // Process transactions for daily report (last 7 days)
-  const dailyData = useMemo(() => {
+  const dailyData = useMemo((): ReportDataItem[] => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -139,26 +149,47 @@ const Reports = () => {
         .reduce((sum, t) => sum + t.final_cost, 0);
 
       // Group by service types
-      const serviceTypes = ['xerox', 'scanning', 'net_printing', 'spiral_binding', 'lamination', 'rubber_stamps'];
-      const serviceData = serviceTypes.reduce((acc, serviceType) => {
-        acc[serviceType] = dayTransactions
-          .filter(t => t.service_type === serviceType)
-          .reduce((sum, t) => sum + t.final_cost, 0);
-        return acc;
-      }, {} as Record<string, number>);
+      const xerox = dayTransactions
+        .filter(t => t.service_type === 'xerox')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const scanning = dayTransactions
+        .filter(t => t.service_type === 'scanning')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const net_printing = dayTransactions
+        .filter(t => t.service_type === 'net_printing')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const spiral_binding = dayTransactions
+        .filter(t => t.service_type === 'spiral_binding')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const lamination = dayTransactions
+        .filter(t => t.service_type === 'lamination')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const rubber_stamps = dayTransactions
+        .filter(t => t.service_type === 'rubber_stamps')
+        .reduce((sum, t) => sum + t.final_cost, 0);
 
       return {
         date: new Date(date).toLocaleDateString('en-IN'),
         cash: cashTotal,
         phonepe: phonepeTotal,
         total: cashTotal + phonepeTotal,
-        ...serviceData
+        xerox,
+        scanning,
+        net_printing,
+        spiral_binding,
+        lamination,
+        rubber_stamps
       };
     });
   }, [transactions]);
 
   // Process transactions for monthly report
-  const monthlyData = useMemo(() => {
+  const monthlyData = useMemo((): ReportDataItem[] => {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -180,20 +211,41 @@ const Reports = () => {
         .reduce((sum, t) => sum + t.final_cost, 0);
 
       // Group by service types
-      const serviceTypes = ['xerox', 'scanning', 'net_printing', 'spiral_binding', 'lamination', 'rubber_stamps'];
-      const serviceData = serviceTypes.reduce((acc, serviceType) => {
-        acc[serviceType] = monthTransactions
-          .filter(t => t.service_type === serviceType)
-          .reduce((sum, t) => sum + t.final_cost, 0);
-        return acc;
-      }, {} as Record<string, number>);
+      const xerox = monthTransactions
+        .filter(t => t.service_type === 'xerox')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const scanning = monthTransactions
+        .filter(t => t.service_type === 'scanning')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const net_printing = monthTransactions
+        .filter(t => t.service_type === 'net_printing')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const spiral_binding = monthTransactions
+        .filter(t => t.service_type === 'spiral_binding')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const lamination = monthTransactions
+        .filter(t => t.service_type === 'lamination')
+        .reduce((sum, t) => sum + t.final_cost, 0);
+      
+      const rubber_stamps = monthTransactions
+        .filter(t => t.service_type === 'rubber_stamps')
+        .reduce((sum, t) => sum + t.final_cost, 0);
 
       return {
         month,
         cash: cashTotal,
         phonepe: phonepeTotal,
         total: cashTotal + phonepeTotal,
-        ...serviceData
+        xerox,
+        scanning,
+        net_printing,
+        spiral_binding,
+        lamination,
+        rubber_stamps
       };
     });
   }, [transactions, selectedYear]);
@@ -206,12 +258,12 @@ const Reports = () => {
   ];
 
   const serviceTypeData = [
-    { name: 'Xerox', value: currentData.reduce((sum, item) => sum + (item.xerox || 0), 0), color: '#3b82f6' },
-    { name: 'Scanning', value: currentData.reduce((sum, item) => sum + (item.scanning || 0), 0), color: '#10b981' },
-    { name: 'Net Printing', value: currentData.reduce((sum, item) => sum + (item.net_printing || 0), 0), color: '#f59e0b' },
-    { name: 'Spiral Binding', value: currentData.reduce((sum, item) => sum + (item.spiral_binding || 0), 0), color: '#ef4444' },
-    { name: 'Lamination', value: currentData.reduce((sum, item) => sum + (item.lamination || 0), 0), color: '#8b5cf6' },
-    { name: 'Rubber Stamps', value: currentData.reduce((sum, item) => sum + (item.rubber_stamps || 0), 0), color: '#06b6d4' }
+    { name: 'Xerox', value: currentData.reduce((sum, item) => sum + item.xerox, 0), color: '#3b82f6' },
+    { name: 'Scanning', value: currentData.reduce((sum, item) => sum + item.scanning, 0), color: '#10b981' },
+    { name: 'Net Printing', value: currentData.reduce((sum, item) => sum + item.net_printing, 0), color: '#f59e0b' },
+    { name: 'Spiral Binding', value: currentData.reduce((sum, item) => sum + item.spiral_binding, 0), color: '#ef4444' },
+    { name: 'Lamination', value: currentData.reduce((sum, item) => sum + item.lamination, 0), color: '#8b5cf6' },
+    { name: 'Rubber Stamps', value: currentData.reduce((sum, item) => sum + item.rubber_stamps, 0), color: '#06b6d4' }
   ].filter(item => item.value > 0);
 
   const totalRevenue = currentData.reduce((sum, item) => sum + item.total, 0);
@@ -420,12 +472,12 @@ const Reports = () => {
                       </TableCell>
                       <TableCell>₹{row.cash}</TableCell>
                       <TableCell>₹{row.phonepe}</TableCell>
-                      <TableCell>₹{row.xerox || 0}</TableCell>
-                      <TableCell>₹{row.scanning || 0}</TableCell>
-                      <TableCell>₹{row.net_printing || 0}</TableCell>
-                      <TableCell>₹{row.spiral_binding || 0}</TableCell>
-                      <TableCell>₹{row.lamination || 0}</TableCell>
-                      <TableCell>₹{row.rubber_stamps || 0}</TableCell>
+                      <TableCell>₹{row.xerox}</TableCell>
+                      <TableCell>₹{row.scanning}</TableCell>
+                      <TableCell>₹{row.net_printing}</TableCell>
+                      <TableCell>₹{row.spiral_binding}</TableCell>
+                      <TableCell>₹{row.lamination}</TableCell>
+                      <TableCell>₹{row.rubber_stamps}</TableCell>
                       <TableCell className="font-semibold">₹{row.total}</TableCell>
                     </TableRow>
                   ))}

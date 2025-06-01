@@ -71,12 +71,15 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
+      // Prepare the transaction data with proper user_id
+      const transactionData = {
+        ...transaction,
+        user_id: user.id || 'anonymous'
+      };
+
       const { data, error } = await supabase
         .from('transactions')
-        .insert([{
-          ...transaction,
-          user_id: user.id || 'anonymous'
-        }])
+        .insert([transactionData])
         .select()
         .single();
 
