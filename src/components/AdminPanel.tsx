@@ -41,7 +41,8 @@ const AdminPanel = () => {
     setLoading(true);
 
     try {
-      // Create the SQL command to add column to transactions table
+      // Since we can't execute arbitrary SQL directly, we'll show a message
+      // In a real production environment, this would require database migration
       const columnTypeMap: Record<typeof newColumnType, string> = {
         text: 'TEXT',
         integer: 'INTEGER',
@@ -53,29 +54,17 @@ const AdminPanel = () => {
 
       const sqlType = columnTypeMap[newColumnType];
       
-      // Use Supabase SQL execution
-      const { error } = await supabase
-        .rpc('exec_sql', { 
-          sql_query: `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ${newColumnName} ${sqlType};`
-        });
-
-      if (error) {
-        console.error('Database column addition error:', error);
-        toast({
-          title: "Column Addition Requested",
-          description: `Column "${newColumnName}" of type ${newColumnType} has been requested. This requires database migration.`,
-        });
-      } else {
-        toast({
-          title: "Column Added Successfully",
-          description: `Added new ${newColumnType} column: ${newColumnName} to transactions table`,
-        });
-      }
+      console.log(`SQL Migration needed: ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ${newColumnName} ${sqlType};`);
+      
+      toast({
+        title: "Column Addition Requested",
+        description: `Column "${newColumnName}" of type ${newColumnType} has been requested. Check console for SQL migration command.`,
+      });
       
       setNewColumnName("");
       setNewColumnType("text");
     } catch (error) {
-      console.error('Error adding column:', error);
+      console.error('Error processing column addition:', error);
       toast({
         title: "Column Addition Requested",
         description: `Column "${newColumnName}" of type ${newColumnType} has been requested for the transactions table.`,
