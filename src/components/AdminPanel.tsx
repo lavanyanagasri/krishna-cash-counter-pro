@@ -1,18 +1,17 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Database, Users, UserPlus, Settings, Wrench } from "lucide-react";
+import { Plus, Users, UserPlus, Settings, Wrench } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useServices, Service } from "@/hooks/useServices";
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminPanel = () => {
-  const [newColumnName, setNewColumnName] = useState("");
-  const [newColumnType, setNewColumnType] = useState<"text" | "integer" | "numeric" | "boolean" | "date" | "timestamp">("text");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,53 +25,6 @@ const AdminPanel = () => {
   const [newServicePaperSize, setNewServicePaperSize] = useState("");
   const [newServiceColorType, setNewServiceColorType] = useState<'black_white' | 'color'>('black_white');
   const [newServiceOrientation, setNewServiceOrientation] = useState<'single_side' | 'both_sides'>('single_side');
-
-  const handleAddColumn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newColumnName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a column name",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Since we can't execute arbitrary SQL directly, we'll show a message
-      // In a real production environment, this would require database migration
-      const columnTypeMap: Record<typeof newColumnType, string> = {
-        text: 'TEXT',
-        integer: 'INTEGER',
-        numeric: 'NUMERIC',
-        boolean: 'BOOLEAN',
-        date: 'DATE',
-        timestamp: 'TIMESTAMP WITH TIME ZONE'
-      };
-
-      const sqlType = columnTypeMap[newColumnType];
-      
-      console.log(`SQL Migration needed: ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ${newColumnName} ${sqlType};`);
-      
-      toast({
-        title: "Column Addition Requested",
-        description: `Column "${newColumnName}" of type ${newColumnType} has been requested. Check console for SQL migration command.`,
-      });
-      
-      setNewColumnName("");
-      setNewColumnType("text");
-    } catch (error) {
-      console.error('Error processing column addition:', error);
-      toast({
-        title: "Column Addition Requested",
-        description: `Column "${newColumnName}" of type ${newColumnType} has been requested for the transactions table.`,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,13 +133,6 @@ const AdminPanel = () => {
     }
   };
 
-  const handleManageDatabase = () => {
-    toast({
-      title: "Database Management",
-      description: "Use the form above to add new columns to the transactions table",
-    });
-  };
-
   const handleManageUsers = () => {
     toast({
       title: "User Management", 
@@ -216,56 +161,6 @@ const AdminPanel = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            Database Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAddColumn} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="column-name">Column Name</Label>
-                <Input
-                  id="column-name"
-                  type="text"
-                  placeholder="Enter column name"
-                  value={newColumnName}
-                  onChange={(e) => setNewColumnName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="column-type">Column Type</Label>
-                <Select value={newColumnType} onValueChange={(value: typeof newColumnType) => setNewColumnType(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="integer">Integer</SelectItem>
-                    <SelectItem value="numeric">Numeric</SelectItem>
-                    <SelectItem value="boolean">Boolean</SelectItem>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="timestamp">Timestamp</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={loading || !newColumnName.trim()}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {loading ? "Adding Column..." : "Add Column to Transactions Table"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -473,17 +368,9 @@ const AdminPanel = () => {
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              As an admin, you can manage database columns, user accounts, and services.
+              As an admin, you can manage user accounts and services. Database transactions are automatically handled.
             </p>
-            <div className="grid grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-auto p-4 flex flex-col items-center gap-2"
-                onClick={handleManageDatabase}
-              >
-                <Database className="w-6 h-6" />
-                <span>Manage Database</span>
-              </Button>
+            <div className="grid grid-cols-2 gap-4">
               <Button 
                 variant="outline" 
                 className="h-auto p-4 flex flex-col items-center gap-2"

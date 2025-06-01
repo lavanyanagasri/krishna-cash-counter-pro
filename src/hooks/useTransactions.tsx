@@ -47,11 +47,7 @@ export const useTransactions = () => {
       setTransactions(data || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
-      // Fallback to localStorage for compatibility
-      const savedTransactions = localStorage.getItem('transactions');
-      if (savedTransactions) {
-        setTransactions(JSON.parse(savedTransactions));
-      }
+      setTransactions([]);
     } finally {
       setIsLoading(false);
     }
@@ -66,14 +62,42 @@ export const useTransactions = () => {
   }, [user]);
 
   const addTransaction = async (transaction: TransactionInsert) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add transactions",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsAddingTransaction(true);
     
     try {
+      // Generate a proper UUID for the user_id if it's not already one
+      let userId = user.id;
+      if (!userId || userId === 'admin' || userId === 'user') {
+        // Generate a consistent UUID based on the email
+        const crypto = window.crypto || (window as any).msCrypto;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(user.email);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Convert to UUID format (8-4-4-4-12)
+        userId = [
+          hashHex.substring(0, 8),
+          hashHex.substring(8, 12),
+          hashHex.substring(12, 16),
+          hashHex.substring(16, 20),
+          hashHex.substring(20, 32)
+        ].join('-');
+      }
+
       // Prepare the transaction data with proper typing and user_id
       const transactionData = {
-        user_id: user.id || 'anonymous',
+        user_id: userId,
         date: transaction.date,
         time: transaction.time,
         sales_type: transaction.sales_type as 'Cash' | 'PhonePe',
@@ -87,6 +111,8 @@ export const useTransactions = () => {
         service_type: transaction.service_type,
         notes: transaction.notes
       };
+
+      console.log('Adding transaction with data:', transactionData);
 
       const { data, error } = await supabase
         .from('transactions')
@@ -105,24 +131,10 @@ export const useTransactions = () => {
     } catch (error) {
       console.error('Error adding transaction:', error);
       
-      // Fallback to localStorage
-      const newTransaction: Transaction = {
-        ...transaction,
-        id: Math.random().toString(36).substr(2, 9),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const savedTransactions = localStorage.getItem('transactions');
-      const existingTransactions = savedTransactions ? JSON.parse(savedTransactions) : [];
-      const updatedTransactions = [newTransaction, ...existingTransactions];
-      
-      setTransactions(updatedTransactions);
-      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
-      
       toast({
-        title: "Transaction Added (Local)",
-        description: "Transaction saved locally",
+        title: "Error",
+        description: "Failed to add transaction. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsAddingTransaction(false);
@@ -151,14 +163,10 @@ export const useTransactions = () => {
     } catch (error) {
       console.error('Error deleting transaction:', error);
       
-      // Fallback to localStorage
-      const updatedTransactions = transactions.filter(t => t.id !== id);
-      setTransactions(updatedTransactions);
-      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
-      
       toast({
-        title: "Transaction Deleted (Local)",
-        description: "Transaction removed locally",
+        title: "Error",
+        description: "Failed to delete transaction. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsDeletingTransaction(false);
