@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type Transaction = {
   id: string;
@@ -14,6 +15,9 @@ type Transaction = {
   cost: number;
   estimation: number;
   final_cost: number;
+  service_id?: string;
+  service_type?: 'xerox' | 'scanning' | 'net_printing' | 'spiral_binding' | 'lamination' | 'rubber_stamps';
+  notes?: string;
   created_at: string;
   updated_at: string;
 };
@@ -28,24 +32,66 @@ export const useTransactions = () => {
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      // Load transactions from localStorage
+  const fetchTransactions = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      // Fallback to localStorage for compatibility
       const savedTransactions = localStorage.getItem('transactions');
       if (savedTransactions) {
         setTransactions(JSON.parse(savedTransactions));
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchTransactions();
     } else {
       setTransactions([]);
     }
   }, [user]);
 
-  const addTransaction = (transaction: TransactionInsert) => {
+  const addTransaction = async (transaction: TransactionInsert) => {
     if (!user) return;
 
     setIsAddingTransaction(true);
     
     try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([{
+          ...transaction,
+          user_id: user.id || 'anonymous'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTransactions(prev => [data, ...prev]);
+      
+      toast({
+        title: "Transaction Added",
+        description: "Transaction recorded successfully",
+      });
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      
+      // Fallback to localStorage
       const newTransaction: Transaction = {
         ...transaction,
         id: Math.random().toString(36).substr(2, 9),
@@ -53,44 +99,52 @@ export const useTransactions = () => {
         updated_at: new Date().toISOString(),
       };
 
-      const updatedTransactions = [newTransaction, ...transactions];
+      const savedTransactions = localStorage.getItem('transactions');
+      const existingTransactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+      const updatedTransactions = [newTransaction, ...existingTransactions];
+      
       setTransactions(updatedTransactions);
       localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
       
       toast({
-        title: "Transaction Added",
-        description: "Transaction recorded successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add transaction",
-        variant: "destructive",
+        title: "Transaction Added (Local)",
+        description: "Transaction saved locally",
       });
     } finally {
       setIsAddingTransaction(false);
     }
   };
 
-  const deleteTransaction = (id: string) => {
+  const deleteTransaction = async (id: string) => {
     if (!user) return;
 
     setIsDeletingTransaction(true);
     
     try {
-      const updatedTransactions = transactions.filter(t => t.id !== id);
-      setTransactions(updatedTransactions);
-      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTransactions(prev => prev.filter(t => t.id !== id));
       
       toast({
         title: "Transaction Deleted",
         description: "Transaction removed successfully",
       });
     } catch (error) {
+      console.error('Error deleting transaction:', error);
+      
+      // Fallback to localStorage
+      const updatedTransactions = transactions.filter(t => t.id !== id);
+      setTransactions(updatedTransactions);
+      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+      
       toast({
-        title: "Error",
-        description: "Failed to delete transaction",
-        variant: "destructive",
+        title: "Transaction Deleted (Local)",
+        description: "Transaction removed locally",
       });
     } finally {
       setIsDeletingTransaction(false);
@@ -104,5 +158,6 @@ export const useTransactions = () => {
     deleteTransaction,
     isAddingTransaction,
     isDeletingTransaction,
+    fetchTransactions,
   };
 };

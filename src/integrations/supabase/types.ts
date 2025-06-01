@@ -45,6 +45,48 @@ export type Database = {
         }
         Relationships: []
       }
+      services: {
+        Row: {
+          color_type: Database["public"]["Enums"]["color_type"] | null
+          created_at: string
+          id: string
+          name: string
+          paper_orientation:
+            | Database["public"]["Enums"]["paper_orientation"]
+            | null
+          paper_size: string | null
+          price: number
+          service_type: Database["public"]["Enums"]["service_type"]
+          updated_at: string
+        }
+        Insert: {
+          color_type?: Database["public"]["Enums"]["color_type"] | null
+          created_at?: string
+          id?: string
+          name: string
+          paper_orientation?:
+            | Database["public"]["Enums"]["paper_orientation"]
+            | null
+          paper_size?: string | null
+          price: number
+          service_type: Database["public"]["Enums"]["service_type"]
+          updated_at?: string
+        }
+        Update: {
+          color_type?: Database["public"]["Enums"]["color_type"] | null
+          created_at?: string
+          id?: string
+          name?: string
+          paper_orientation?:
+            | Database["public"]["Enums"]["paper_orientation"]
+            | null
+          paper_size?: string | null
+          price?: number
+          service_type?: Database["public"]["Enums"]["service_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           cost: number
@@ -53,9 +95,12 @@ export type Database = {
           estimation: number
           final_cost: number
           id: string
+          notes: string | null
           paper_size: Database["public"]["Enums"]["paper_size"]
           quantity: number
           sales_type: Database["public"]["Enums"]["sales_type"]
+          service_id: string | null
+          service_type: Database["public"]["Enums"]["service_type"] | null
           time: string
           updated_at: string
           user_id: string
@@ -68,9 +113,12 @@ export type Database = {
           estimation?: number
           final_cost: number
           id?: string
+          notes?: string | null
           paper_size: Database["public"]["Enums"]["paper_size"]
           quantity: number
           sales_type: Database["public"]["Enums"]["sales_type"]
+          service_id?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"] | null
           time?: string
           updated_at?: string
           user_id: string
@@ -83,15 +131,26 @@ export type Database = {
           estimation?: number
           final_cost?: number
           id?: string
+          notes?: string | null
           paper_size?: Database["public"]["Enums"]["paper_size"]
           quantity?: number
           sales_type?: Database["public"]["Enums"]["sales_type"]
+          service_id?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"] | null
           time?: string
           updated_at?: string
           user_id?: string
           xerox_type?: Database["public"]["Enums"]["xerox_type"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -101,8 +160,20 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      binding_type: "spiral_a4" | "spiral_a3"
+      color_type: "black_white" | "color"
+      lamination_type: "id_card" | "a4" | "a3"
+      paper_orientation: "single_side" | "both_sides"
       paper_size: "A4" | "A3" | "A2" | "A1" | "A0"
       sales_type: "Cash" | "PhonePe"
+      service_type:
+        | "xerox"
+        | "scanning"
+        | "net_printing"
+        | "spiral_binding"
+        | "lamination"
+        | "rubber_stamps"
+      stamp_type: "one_line" | "two_line" | "address" | "pre_inked"
       xerox_type: "Black" | "White" | "Color"
     }
     CompositeTypes: {
@@ -219,8 +290,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      binding_type: ["spiral_a4", "spiral_a3"],
+      color_type: ["black_white", "color"],
+      lamination_type: ["id_card", "a4", "a3"],
+      paper_orientation: ["single_side", "both_sides"],
       paper_size: ["A4", "A3", "A2", "A1", "A0"],
       sales_type: ["Cash", "PhonePe"],
+      service_type: [
+        "xerox",
+        "scanning",
+        "net_printing",
+        "spiral_binding",
+        "lamination",
+        "rubber_stamps",
+      ],
+      stamp_type: ["one_line", "two_line", "address", "pre_inked"],
       xerox_type: ["Black", "White", "Color"],
     },
   },

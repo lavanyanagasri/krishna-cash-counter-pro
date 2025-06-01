@@ -8,61 +8,78 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useServices, Service } from "@/hooks/useServices";
+import { Textarea } from "@/components/ui/textarea";
 
 type SalesType = "Cash" | "PhonePe";
-type XeroxType = "Black" | "White" | "Color";
-type PaperSize = "A4" | "A3" | "A2" | "A1" | "A0";
 
 const DayBook = () => {
   const { transactions, addTransaction, deleteTransaction, isAddingTransaction } = useTransactions();
+  const { services, isLoading: servicesLoading } = useServices();
+  
   const [salesType, setSalesType] = useState<SalesType>("Cash");
-  const [xeroxType, setXeroxType] = useState<XeroxType>("Black");
-  const [paperSize, setPaperSize] = useState<PaperSize>("A4");
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [quantity, setQuantity] = useState("");
   const [estimation, setEstimation] = useState("");
-
-  // Cost per page (in rupees) based on xerox type and paper size
-  const costs = {
-    Black: { A4: 2, A3: 5, A2: 10, A1: 20, A0: 40 },
-    White: { A4: 1, A3: 3, A2: 7, A1: 15, A0: 30 },
-    Color: { A4: 10, A3: 20, A2: 40, A1: 75, A0: 150 }
-  };
+  const [notes, setNotes] = useState("");
 
   const calculateFinalCost = () => {
     const qty = parseInt(quantity) || 0;
-    const cost = qty * costs[xeroxType][paperSize];
+    const cost = selectedService ? qty * selectedService.price : 0;
     const est = parseFloat(estimation) || 0;
     return Math.max(0, cost - est);
   };
 
-  const handleAddTransaction = () => {
-    if (!quantity || parseInt(quantity) <= 0) return;
+  const handleServiceChange = (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId);
+    setSelectedService(service || null);
+  };
+
+  const handleAddTransaction = async () => {
+    if (!quantity || parseInt(quantity) <= 0 || !selectedService) return;
 
     const qty = parseInt(quantity);
-    const cost = qty * costs[xeroxType][paperSize];
+    const cost = qty * selectedService.price;
     const est = parseFloat(estimation) || 0;
     const finalCost = Math.max(0, cost - est);
 
     const now = new Date();
-    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-    const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS format
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0];
 
-    addTransaction({
-      date: currentDate,
-      time: currentTime,
-      sales_type: salesType,
-      xerox_type: xeroxType,
-      paper_size: paperSize,
-      quantity: qty,
-      cost,
-      estimation: est,
-      final_cost: finalCost,
-    });
+    try {
+      await addTransaction({
+        date: currentDate,
+        time: currentTime,
+        sales_type: salesType,
+        xerox_type: 'Black', // Legacy field - keeping for compatibility
+        paper_size: selectedService.paper_size || '',
+        quantity: qty,
+        cost,
+        estimation: est,
+        final_cost: finalCost,
+        service_id: selectedService.id,
+        service_type: selectedService.service_type,
+        notes: notes.trim() || undefined,
+      });
 
-    // Reset form
-    setQuantity("");
-    setEstimation("");
+      // Reset form
+      setQuantity("");
+      setEstimation("");
+      setNotes("");
+      setSelectedService(null);
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+    }
   };
+
+  const groupedServices = services.reduce((acc, service) => {
+    if (!acc[service.service_type]) {
+      acc[service.service_type] = [];
+    }
+    acc[service.service_type].push(service);
+    return acc;
+  }, {} as Record<string, Service[]>);
 
   const todayTransactions = transactions.filter(t => {
     const transactionDate = new Date(t.date).toLocaleDateString('en-IN');
@@ -72,6 +89,18 @@ const DayBook = () => {
 
   const todayTotal = todayTransactions.reduce((sum, t) => sum + t.final_cost, 0);
   const todayPages = todayTransactions.reduce((sum, t) => sum + t.quantity, 0);
+
+  const getServiceTypeLabel = (serviceType: string) => {
+    const labels = {
+      xerox: 'Xerox',
+      scanning: 'Scanning',
+      net_printing: 'Net Printing',
+      spiral_binding: 'Spiral Binding',
+      lamination: 'Lamination',
+      rubber_stamps: 'Rubber Stamps'
+    };
+    return labels[serviceType as keyof typeof labels] || serviceType;
+  };
 
   return (
     <div className="space-y-6">
@@ -84,7 +113,7 @@ const DayBook = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="salesType">Sales Type</Label>
               <Select value={salesType} onValueChange={(value: SalesType) => setSalesType(value)}>
@@ -98,65 +127,66 @@ const DayBook = () => {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="xeroxType">Xerox Type</Label>
-              <Select value={xeroxType} onValueChange={(value: XeroxType) => setXeroxType(value)}>
+            <div className="space-y-2 lg:col-span-2">
+              <Label htmlFor="service">Service</Label>
+              <Select 
+                value={selectedService?.id || ""} 
+                onValueChange={handleServiceChange}
+                disabled={servicesLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Black">Black (₹{costs.Black.A4}/A4 page)</SelectItem>
-                  <SelectItem value="White">White (₹{costs.White.A4}/A4 page)</SelectItem>
-                  <SelectItem value="Color">Color (₹{costs.Color.A4}/A4 page)</SelectItem>
+                  {Object.entries(groupedServices).map(([serviceType, serviceList]) => (
+                    <div key={serviceType}>
+                      <div className="px-2 py-1 text-sm font-semibold text-gray-600 bg-gray-100">
+                        {getServiceTypeLabel(serviceType)}
+                      </div>
+                      {serviceList.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name} - ₹{service.price}
+                        </SelectItem>
+                      ))}
+                    </div>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="paperSize">Paper Size</Label>
-              <Select value={paperSize} onValueChange={(value: PaperSize) => setPaperSize(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A4">A4 (₹{costs[xeroxType].A4})</SelectItem>
-                  <SelectItem value="A3">A3 (₹{costs[xeroxType].A3})</SelectItem>
-                  <SelectItem value="A2">A2 (₹{costs[xeroxType].A2})</SelectItem>
-                  <SelectItem value="A1">A1 (₹{costs[xeroxType].A1})</SelectItem>
-                  <SelectItem value="A0">A0 (₹{costs[xeroxType].A0})</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="quantity">
+                {selectedService?.service_type === 'rubber_stamps' ? 'Quantity' : 'Pages/Items'}
+              </Label>
               <Input
                 id="quantity"
                 type="number"
-                placeholder="No. of pages"
+                placeholder="Enter quantity"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 min="1"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div className="space-y-2">
               <Label htmlFor="cost">Cost</Label>
               <Input
                 id="cost"
                 type="text"
-                value={`₹${(parseInt(quantity) || 0) * costs[xeroxType][paperSize]}`}
+                value={`₹${selectedService ? (parseInt(quantity) || 0) * selectedService.price : 0}`}
                 readOnly
                 className="bg-gray-50"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estimation">Estimation (₹)</Label>
+              <Label htmlFor="estimation">Discount (₹)</Label>
               <Input
                 id="estimation"
                 type="number"
-                placeholder="Discount/Est."
+                placeholder="Enter discount"
                 value={estimation}
                 onChange={(e) => setEstimation(e.target.value)}
                 min="0"
@@ -179,12 +209,23 @@ const DayBook = () => {
               <Button 
                 onClick={handleAddTransaction}
                 className="bg-green-600 hover:bg-green-700 w-full"
-                disabled={isAddingTransaction}
+                disabled={isAddingTransaction || !selectedService || !quantity}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 {isAddingTransaction ? "Adding..." : "Add Transaction"}
               </Button>
             </div>
+          </div>
+
+          <div className="mt-4">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Add any additional notes..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="mt-2"
+            />
           </div>
         </CardContent>
       </Card>
@@ -205,7 +246,7 @@ const DayBook = () => {
               <p className="text-2xl font-bold text-green-600">₹{todayTotal}</p>
             </div>
             <div className="bg-orange-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Total Pages</p>
+              <p className="text-sm text-gray-600">Total Items</p>
               <p className="text-2xl font-bold text-orange-600">{todayPages}</p>
             </div>
           </div>
@@ -231,56 +272,54 @@ const DayBook = () => {
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
                     <TableHead>Sales Type</TableHead>
-                    <TableHead>Xerox Type</TableHead>
-                    <TableHead>Paper Size</TableHead>
+                    <TableHead>Service</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Cost</TableHead>
-                    <TableHead>Estimation</TableHead>
+                    <TableHead>Discount</TableHead>
                     <TableHead>Final Cost</TableHead>
+                    <TableHead>Notes</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>{new Date(transaction.date).toLocaleDateString('en-IN')}</TableCell>
-                      <TableCell>{transaction.time}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          transaction.sales_type === 'Cash' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {transaction.sales_type}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          transaction.xerox_type === 'Black' 
-                            ? 'bg-gray-100 text-gray-800' 
-                            : transaction.xerox_type === 'White'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {transaction.xerox_type}
-                        </span>
-                      </TableCell>
-                      <TableCell>{transaction.paper_size}</TableCell>
-                      <TableCell>{transaction.quantity}</TableCell>
-                      <TableCell>₹{transaction.cost}</TableCell>
-                      <TableCell>₹{transaction.estimation}</TableCell>
-                      <TableCell className="font-semibold">₹{transaction.final_cost}</TableCell>
-                      <TableCell>
-                        <Button
-                          onClick={() => deleteTransaction(transaction.id)}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {transactions.map((transaction) => {
+                    const service = services.find(s => s.id === transaction.service_id);
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell>{new Date(transaction.date).toLocaleDateString('en-IN')}</TableCell>
+                        <TableCell>{transaction.time}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            transaction.sales_type === 'Cash' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {transaction.sales_type}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className="font-medium">{service?.name || 'Legacy Service'}</div>
+                            <div className="text-gray-500">{getServiceTypeLabel(transaction.service_type || 'xerox')}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{transaction.quantity}</TableCell>
+                        <TableCell>₹{transaction.cost}</TableCell>
+                        <TableCell>₹{transaction.estimation}</TableCell>
+                        <TableCell className="font-semibold">₹{transaction.final_cost}</TableCell>
+                        <TableCell>{transaction.notes || '-'}</TableCell>
+                        <TableCell>
+                          <Button
+                            onClick={() => deleteTransaction(transaction.id)}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
