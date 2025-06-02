@@ -79,16 +79,20 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // Use the authenticated user's ID directly from Supabase Auth
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      // For localStorage-based auth users, we'll use their local ID
+      let userId = user.id;
       
-      if (!authUser) {
-        throw new Error('No authenticated user found');
+      // If this is a Supabase authenticated user, use their actual ID
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+      if (supabaseUser) {
+        userId = supabaseUser.id;
       }
+
+      console.log('Using user ID for transaction:', userId);
 
       // Prepare the transaction data for database storage
       const transactionData = {
-        user_id: authUser.id, // Use the actual Supabase Auth user ID
+        user_id: userId,
         date: transaction.date,
         time: transaction.time,
         sales_type: transaction.sales_type as 'Cash' | 'PhonePe',
@@ -111,14 +115,17 @@ export const useTransactions = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       // Update local state with the new transaction from database
       setTransactions(prev => [data, ...prev]);
       
       toast({
-        title: "Transaction Saved",
-        description: "Transaction successfully stored in database",
+        title: "Transaction Added Successfully",
+        description: "Transaction has been saved to the database",
       });
 
       return data;
@@ -126,8 +133,8 @@ export const useTransactions = () => {
       console.error('Error storing transaction in database:', error);
       
       toast({
-        title: "Database Error",
-        description: "Failed to save transaction to database. Please try again.",
+        title: "Failed to Add Transaction",
+        description: "Could not save transaction to database. Please try again.",
         variant: "destructive",
       });
       throw error;
