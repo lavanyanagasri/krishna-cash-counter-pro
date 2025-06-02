@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Database } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useServices, Service } from "@/hooks/useServices";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +36,9 @@ const DayBook = () => {
   };
 
   const handleAddTransaction = async () => {
-    if (!quantity || parseInt(quantity) <= 0 || !selectedService) return;
+    if (!quantity || parseInt(quantity) <= 0 || !selectedService) {
+      return;
+    }
 
     const qty = parseInt(quantity);
     const cost = qty * selectedService.price;
@@ -53,7 +55,7 @@ const DayBook = () => {
         time: currentTime,
         sales_type: salesType,
         xerox_type: 'Black', // Legacy field - keeping for compatibility
-        paper_size: selectedService.paper_size || '',
+        paper_size: selectedService.paper_size || 'A4',
         quantity: qty,
         cost,
         estimation: est,
@@ -63,13 +65,13 @@ const DayBook = () => {
         notes: notes.trim() || undefined,
       });
 
-      // Reset form
+      // Reset form after successful database storage
       setQuantity("");
       setEstimation("");
       setNotes("");
       setSelectedService(null);
     } catch (error) {
-      console.error('Error adding transaction:', error);
+      console.error('Error adding transaction to database:', error);
     }
   };
 
@@ -108,8 +110,8 @@ const DayBook = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Add New Transaction
+            <Database className="w-5 h-5" />
+            Add New Transaction (Database Storage)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -128,14 +130,14 @@ const DayBook = () => {
             </div>
 
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="service">Service</Label>
+              <Label htmlFor="service">Select Service for Customer</Label>
               <Select 
                 value={selectedService?.id || ""} 
                 onValueChange={handleServiceChange}
                 disabled={servicesLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a service" />
+                  <SelectValue placeholder="Choose any service for the customer" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(groupedServices).map(([serviceType, serviceList]) => (
@@ -145,7 +147,10 @@ const DayBook = () => {
                       </div>
                       {serviceList.map((service) => (
                         <SelectItem key={service.id} value={service.id}>
-                          {service.name} - ₹{service.price}
+                          <div className="flex justify-between items-center w-full">
+                            <span>{service.name}</span>
+                            <span className="ml-2 font-semibold">₹{service.price}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </div>
@@ -211,17 +216,17 @@ const DayBook = () => {
                 className="bg-green-600 hover:bg-green-700 w-full"
                 disabled={isAddingTransaction || !selectedService || !quantity}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                {isAddingTransaction ? "Adding..." : "Add Transaction"}
+                <Database className="w-4 h-4 mr-2" />
+                {isAddingTransaction ? "Saving to DB..." : "Save to Database"}
               </Button>
             </div>
           </div>
 
           <div className="mt-4">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Label htmlFor="notes">Customer Notes (Optional)</Label>
             <Textarea
               id="notes"
-              placeholder="Add any additional notes..."
+              placeholder="Add any customer-specific notes..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="mt-2"
@@ -233,7 +238,10 @@ const DayBook = () => {
       {/* Today's Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Today's Summary</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            Today's Summary (From Database)
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -256,13 +264,17 @@ const DayBook = () => {
       {/* Transactions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            Recent Transactions (Database Records)
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No transactions recorded yet.</p>
-              <p>Add your first transaction above to get started.</p>
+              <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No transactions found in database.</p>
+              <p>Add your first transaction above to store it in the database.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -277,7 +289,7 @@ const DayBook = () => {
                     <TableHead>Cost</TableHead>
                     <TableHead>Discount</TableHead>
                     <TableHead>Final Cost</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>Customer Notes</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -301,13 +313,16 @@ const DayBook = () => {
                           <div className="text-sm">
                             <div className="font-medium">{service?.name || 'Legacy Service'}</div>
                             <div className="text-gray-500">{getServiceTypeLabel(transaction.service_type || 'xerox')}</div>
+                            {service?.paper_size && (
+                              <div className="text-xs text-gray-400">{service.paper_size}</div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>{transaction.quantity}</TableCell>
                         <TableCell>₹{transaction.cost}</TableCell>
                         <TableCell>₹{transaction.estimation}</TableCell>
                         <TableCell className="font-semibold">₹{transaction.final_cost}</TableCell>
-                        <TableCell>{transaction.notes || '-'}</TableCell>
+                        <TableCell className="max-w-xs truncate">{transaction.notes || '-'}</TableCell>
                         <TableCell>
                           <Button
                             onClick={() => deleteTransaction(transaction.id)}

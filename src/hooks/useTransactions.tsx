@@ -47,6 +47,11 @@ export const useTransactions = () => {
       setTransactions(data || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load transactions from database",
+        variant: "destructive",
+      });
       setTransactions([]);
     } finally {
       setIsLoading(false);
@@ -65,7 +70,7 @@ export const useTransactions = () => {
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please log in to add transactions",
+        description: "Please log in to add transactions to database",
         variant: "destructive",
       });
       return;
@@ -74,30 +79,16 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // Generate a proper UUID for the user_id if it's not already one
-      let userId = user.id;
-      if (!userId || userId === 'admin' || userId === 'user') {
-        // Generate a consistent UUID based on the email
-        const crypto = window.crypto || (window as any).msCrypto;
-        const encoder = new TextEncoder();
-        const data = encoder.encode(user.email);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        // Convert to UUID format (8-4-4-4-12)
-        userId = [
-          hashHex.substring(0, 8),
-          hashHex.substring(8, 12),
-          hashHex.substring(12, 16),
-          hashHex.substring(16, 20),
-          hashHex.substring(20, 32)
-        ].join('-');
+      // Use the authenticated user's ID directly from Supabase Auth
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        throw new Error('No authenticated user found');
       }
 
-      // Prepare the transaction data with proper typing and user_id
+      // Prepare the transaction data for database storage
       const transactionData = {
-        user_id: userId,
+        user_id: authUser.id, // Use the actual Supabase Auth user ID
         date: transaction.date,
         time: transaction.time,
         sales_type: transaction.sales_type as 'Cash' | 'PhonePe',
@@ -112,7 +103,7 @@ export const useTransactions = () => {
         notes: transaction.notes
       };
 
-      console.log('Adding transaction with data:', transactionData);
+      console.log('Storing transaction in database:', transactionData);
 
       const { data, error } = await supabase
         .from('transactions')
@@ -122,20 +113,24 @@ export const useTransactions = () => {
 
       if (error) throw error;
 
+      // Update local state with the new transaction from database
       setTransactions(prev => [data, ...prev]);
       
       toast({
-        title: "Transaction Added",
-        description: "Transaction recorded successfully",
+        title: "Transaction Saved",
+        description: "Transaction successfully stored in database",
       });
+
+      return data;
     } catch (error) {
-      console.error('Error adding transaction:', error);
+      console.error('Error storing transaction in database:', error);
       
       toast({
-        title: "Error",
-        description: "Failed to add transaction. Please try again.",
+        title: "Database Error",
+        description: "Failed to save transaction to database. Please try again.",
         variant: "destructive",
       });
+      throw error;
     } finally {
       setIsAddingTransaction(false);
     }
@@ -154,18 +149,19 @@ export const useTransactions = () => {
 
       if (error) throw error;
 
+      // Update local state after successful database deletion
       setTransactions(prev => prev.filter(t => t.id !== id));
       
       toast({
         title: "Transaction Deleted",
-        description: "Transaction removed successfully",
+        description: "Transaction removed from database",
       });
     } catch (error) {
-      console.error('Error deleting transaction:', error);
+      console.error('Error deleting transaction from database:', error);
       
       toast({
-        title: "Error",
-        description: "Failed to delete transaction. Please try again.",
+        title: "Database Error",
+        description: "Failed to delete transaction from database. Please try again.",
         variant: "destructive",
       });
     } finally {
