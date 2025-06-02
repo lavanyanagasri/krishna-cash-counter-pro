@@ -18,6 +18,11 @@ type Transaction = {
   service_id?: string;
   service_type?: 'xerox' | 'scanning' | 'net_printing' | 'spiral_binding' | 'lamination' | 'rubber_stamps';
   notes?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  payment_method?: string;
+  discount_reason?: string;
+  transaction_reference?: string;
   created_at: string;
   updated_at: string;
 };
@@ -79,14 +84,8 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // For localStorage-based auth users, we'll use their local ID
-      let userId = user.id;
-      
-      // If this is a Supabase authenticated user, use their actual ID
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      if (supabaseUser) {
-        userId = supabaseUser.id;
-      }
+      // Use the user ID directly from the auth context (now properly formatted as UUID)
+      const userId = user.id;
 
       console.log('Using user ID for transaction:', userId);
 
@@ -104,7 +103,12 @@ export const useTransactions = () => {
         final_cost: transaction.final_cost,
         service_id: transaction.service_id,
         service_type: transaction.service_type,
-        notes: transaction.notes
+        notes: transaction.notes,
+        customer_name: transaction.customer_name,
+        customer_phone: transaction.customer_phone,
+        payment_method: transaction.payment_method || transaction.sales_type,
+        discount_reason: transaction.discount_reason,
+        transaction_reference: transaction.transaction_reference
       };
 
       console.log('Storing transaction in database:', transactionData);

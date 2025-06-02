@@ -91,17 +91,22 @@ export type Database = {
         Row: {
           cost: number
           created_at: string
+          customer_name: string | null
+          customer_phone: string | null
           date: string
+          discount_reason: string | null
           estimation: number
           final_cost: number
           id: string
           notes: string | null
           paper_size: Database["public"]["Enums"]["paper_size"]
+          payment_method: string | null
           quantity: number
           sales_type: Database["public"]["Enums"]["sales_type"]
           service_id: string | null
           service_type: Database["public"]["Enums"]["service_type"] | null
           time: string
+          transaction_reference: string | null
           updated_at: string
           user_id: string
           xerox_type: Database["public"]["Enums"]["xerox_type"]
@@ -109,17 +114,22 @@ export type Database = {
         Insert: {
           cost: number
           created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           date?: string
+          discount_reason?: string | null
           estimation?: number
           final_cost: number
           id?: string
           notes?: string | null
           paper_size: Database["public"]["Enums"]["paper_size"]
+          payment_method?: string | null
           quantity: number
           sales_type: Database["public"]["Enums"]["sales_type"]
           service_id?: string | null
           service_type?: Database["public"]["Enums"]["service_type"] | null
           time?: string
+          transaction_reference?: string | null
           updated_at?: string
           user_id: string
           xerox_type: Database["public"]["Enums"]["xerox_type"]
@@ -127,17 +137,22 @@ export type Database = {
         Update: {
           cost?: number
           created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           date?: string
+          discount_reason?: string | null
           estimation?: number
           final_cost?: number
           id?: string
           notes?: string | null
           paper_size?: Database["public"]["Enums"]["paper_size"]
+          payment_method?: string | null
           quantity?: number
           sales_type?: Database["public"]["Enums"]["sales_type"]
           service_id?: string | null
           service_type?: Database["public"]["Enums"]["service_type"] | null
           time?: string
+          transaction_reference?: string | null
           updated_at?: string
           user_id?: string
           xerox_type?: Database["public"]["Enums"]["xerox_type"]

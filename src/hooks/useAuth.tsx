@@ -30,6 +30,21 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Helper function to generate a deterministic UUID from email for localStorage users
+const generateUserUUID = (email: string): string => {
+  // Create a simple hash-based UUID for consistent user IDs
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    const char = email.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to a UUID-like format
+  const hashStr = Math.abs(hash).toString(16).padStart(8, '0');
+  return `${hashStr.substring(0, 8)}-${hashStr.substring(0, 4)}-4${hashStr.substring(1, 4)}-a${hashStr.substring(2, 5)}-${hashStr.substring(0, 12)}`;
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<{ user: User } | null>(null);
@@ -41,9 +56,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const userEmail = localStorage.getItem('userEmail');
     
     if (isAuthenticated === 'true' && userEmail) {
+      // Generate a proper UUID for the user based on their email
+      const userId = userEmail === 'admin@vaishnavi.com' 
+        ? generateUserUUID('admin@vaishnavi.com')
+        : generateUserUUID(userEmail);
+        
       const userData: User = { 
         email: userEmail,
-        id: userEmail === 'admin@vaishnavi.com' ? 'admin-local-id' : 'user-local-id'
+        id: userId
       };
       setUser(userData);
       setSession({ user: userData });
@@ -127,7 +147,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           const userData: User = { 
             email: email,
-            id: 'admin-local-id'
+            id: generateUserUUID(email)
           };
           setUser(userData);
           setSession({ user: userData });
@@ -141,15 +161,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         // Check registered users
         const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-        const user = registeredUsers.find((user: any) => user.email === email && user.password === password);
+        const registeredUser = registeredUsers.find((user: any) => user.email === email && user.password === password);
 
-        if (user) {
+        if (registeredUser) {
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userEmail', email);
           
           const userData: User = { 
             email: email,
-            id: 'user-local-id'
+            id: generateUserUUID(email)
           };
           setUser(userData);
           setSession({ user: userData });
