@@ -36,6 +36,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const checkLocalStorageAuth = () => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    if (isAuthenticated === 'true' && userEmail) {
+      const userData: User = { 
+        email: userEmail,
+        id: userEmail === 'admin@vaishnavi.com' ? 'admin-local-id' : 'user-local-id'
+      };
+      setUser(userData);
+      setSession({ user: userData });
+      return true;
+    }
+    return false;
+  };
+
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
@@ -49,26 +65,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(userData);
         setSession({ user: userData });
       } else {
-        // Fallback to localStorage for demo purposes
-        const isAuthenticated = localStorage.getItem('isAuthenticated');
-        const userEmail = localStorage.getItem('userEmail');
-        
-        if (isAuthenticated === 'true' && userEmail) {
-          // Create a mock user ID for localStorage auth
-          const userData: User = { 
-            email: userEmail,
-            id: userEmail === 'admin@vaishnavi.com' ? 'admin-local-id' : 'user-local-id'
-          };
-          setUser(userData);
-          setSession({ user: userData });
-        }
+        // Check localStorage as fallback
+        checkLocalStorageAuth();
       }
       setLoading(false);
     };
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes from Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('Auth state changed:', event, currentSession);
@@ -81,15 +86,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(userData);
           setSession({ user: userData });
         } else {
-          setUser(null);
-          setSession(null);
+          // Check localStorage as fallback
+          if (!checkLocalStorageAuth()) {
+            setUser(null);
+            setSession(null);
+          }
         }
         setLoading(false);
       }
     );
 
+    // Listen for localStorage changes (for demo auth)
+    const handleStorageChange = () => {
+      if (!checkLocalStorageAuth()) {
+        setUser(null);
+        setSession(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -119,6 +138,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           });
           return;
         }
+
+        // Check registered users
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const user = registeredUsers.find((user: any) => user.email === email && user.password === password);
+
+        if (user) {
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('userEmail', email);
+          
+          const userData: User = { 
+            email: email,
+            id: 'user-local-id'
+          };
+          setUser(userData);
+          setSession({ user: userData });
+          
+          toast({
+            title: "Signed In",
+            description: "You have been signed in successfully.",
+          });
+          return;
+        }
+
         throw error;
       }
 

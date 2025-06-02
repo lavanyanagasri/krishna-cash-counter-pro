@@ -6,58 +6,81 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Check admin credentials first
-      if (email === "admin@vaishnavi.com" && password === "admin123") {
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userEmail', email);
-        
-        window.dispatchEvent(new Event('storage'));
-        
+      await signIn(email, password);
+      // The useAuth hook will handle the redirect automatically when user state changes
+    } catch (error) {
+      // Error handling is done in the signIn function
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // For demo purposes, add the user to localStorage
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      
+      // Check if user already exists
+      const existingUser = registeredUsers.find((user: any) => user.email === email);
+      if (existingUser) {
         toast({
-          title: "Admin Login Successful",
-          description: "Welcome to Vaishnavi Jumbo Zerox - Admin Panel",
+          title: "User Already Exists",
+          description: "An account with this email already exists. Please sign in instead.",
+          variant: "destructive",
         });
         setLoading(false);
         return;
       }
 
-      // Check registered users
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const user = registeredUsers.find((user: any) => user.email === email && user.password === password);
+      // Add new user
+      registeredUsers.push({ email, password });
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
 
-      if (user) {
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userEmail', email);
-        
-        window.dispatchEvent(new Event('storage'));
-        
-        toast({
-          title: "Login Successful",
-          description: "Welcome to Vaishnavi Jumbo Zerox",
-        });
-      } else {
-        toast({
-          title: "Invalid Credentials",
-          description: "Please check your email and password or contact admin",
-          variant: "destructive",
-        });
-      }
+      // Automatically sign in the user after signup
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userEmail', email);
+      
+      // Trigger storage event to update auth state
+      window.dispatchEvent(new Event('storage'));
+      
+      toast({
+        title: "Account Created Successfully",
+        description: "Welcome to Vaishnavi Jumbo Zerox! You are now signed in.",
+      });
+
     } catch (error) {
       toast({
-        title: "Login Error",
-        description: "An error occurred during login",
+        title: "Sign Up Error",
+        description: "An error occurred during sign up. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -80,20 +103,22 @@ const AuthPage = () => {
         {/* Auth Card */}
         <Card className="shadow-xl border-0">
           <CardHeader className="bg-blue-600 text-white rounded-t-lg">
-            <CardTitle className="text-xl text-center">Login</CardTitle>
+            <CardTitle className="text-xl text-center">
+              {isSignUp ? "Create Account" : "Login"}
+            </CardTitle>
             <CardDescription className="text-blue-100 text-center">
-              Sign in to your account
+              {isSignUp ? "Sign up for a new account" : "Sign in to your account"}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <Tabs defaultValue="user" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="user">User Login</TabsTrigger>
+                <TabsTrigger value="user">User {isSignUp ? "Sign Up" : "Login"}</TabsTrigger>
                 <TabsTrigger value="admin">Admin Login</TabsTrigger>
               </TabsList>
 
               <TabsContent value="user">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="user-email">Email</Label>
                     <Input
@@ -116,17 +141,47 @@ const AuthPage = () => {
                       required
                     />
                   </div>
+                  {isSignUp && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm Password</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
                   <Button 
                     type="submit" 
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={loading}
                   >
-                    {loading ? "Signing In..." : "Sign In as User"}
+                    {loading ? (isSignUp ? "Creating Account..." : "Signing In...") : (isSignUp ? "Create Account" : "Sign In")}
                   </Button>
                 </form>
-                <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
-                  <p><strong>Note:</strong> User accounts are created by admin</p>
+                
+                <div className="mt-4 text-center">
+                  <button 
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setEmail("");
+                      setPassword("");
+                      setConfirmPassword("");
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm underline"
+                  >
+                    {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+                  </button>
                 </div>
+
+                {!isSignUp && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
+                    <p><strong>Note:</strong> User accounts can be created by signing up</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="admin">
