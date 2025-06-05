@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { Plus, Trash2, Database } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useServices, Service } from "@/hooks/useServices";
 import { Textarea } from "@/components/ui/textarea";
+import MultiServiceSelector from "./MultiServiceSelector";
 
 type SalesType = "Cash" | "PhonePe";
 
@@ -106,12 +106,19 @@ const DayBook = () => {
 
   return (
     <div className="space-y-6">
-      {/* Add Transaction Form */}
+      {/* Multi-Service Transaction */}
+      <MultiServiceSelector 
+        services={services}
+        onAddTransaction={addTransaction}
+        isLoading={isAddingTransaction}
+      />
+
+      {/* Single Service Transaction */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="w-5 h-5" />
-            Add New Transaction (Database Storage)
+            Single Service Transaction
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -213,11 +220,11 @@ const DayBook = () => {
             <div className="space-y-2 flex items-end">
               <Button 
                 onClick={handleAddTransaction}
-                className="bg-green-600 hover:bg-green-700 w-full"
+                className="bg-blue-600 hover:bg-blue-700 w-full"
                 disabled={isAddingTransaction || !selectedService || !quantity}
               >
                 <Database className="w-4 h-4 mr-2" />
-                {isAddingTransaction ? "Saving to DB..." : "Save to Database"}
+                {isAddingTransaction ? "Saving..." : "Add Single Service"}
               </Button>
             </div>
           </div>
