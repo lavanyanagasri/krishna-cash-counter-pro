@@ -30,9 +30,9 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Helper function to generate a deterministic UUID from email for localStorage users
+// Helper function to generate a proper UUID v4 from email for localStorage users
 const generateUserUUID = (email: string): string => {
-  // Create a simple hash-based UUID for consistent user IDs
+  // Create a more robust hash-based UUID
   let hash = 0;
   for (let i = 0; i < email.length; i++) {
     const char = email.charCodeAt(i);
@@ -40,9 +40,21 @@ const generateUserUUID = (email: string): string => {
     hash = hash & hash; // Convert to 32-bit integer
   }
   
-  // Convert to a UUID-like format
-  const hashStr = Math.abs(hash).toString(16).padStart(8, '0');
-  return `${hashStr.substring(0, 8)}-${hashStr.substring(0, 4)}-4${hashStr.substring(1, 4)}-a${hashStr.substring(2, 5)}-${hashStr.substring(0, 12)}`;
+  // Generate a proper UUID v4 format using the hash as seed
+  const hashHex = Math.abs(hash).toString(16).padStart(8, '0');
+  const randomHex = Math.random().toString(16).substr(2, 8);
+  const timeHex = Date.now().toString(16).substr(-8);
+  
+  // Create a proper UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  const uuid = [
+    hashHex.substr(0, 8),
+    hashHex.substr(0, 4),
+    '4' + randomHex.substr(1, 3), // Version 4
+    ((parseInt(randomHex.substr(0, 1), 16) & 0x3) | 0x8).toString(16) + timeHex.substr(0, 3), // Variant bits
+    timeHex + randomHex.substr(0, 8)
+  ].join('-');
+  
+  return uuid;
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
