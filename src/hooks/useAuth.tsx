@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -32,29 +31,30 @@ interface AuthProviderProps {
 
 // Helper function to generate a proper UUID v4 from email for localStorage users
 const generateUserUUID = (email: string): string => {
-  // Create a more robust hash-based UUID
-  let hash = 0;
+  // Create a deterministic seed from email
+  let seed = 0;
   for (let i = 0; i < email.length; i++) {
     const char = email.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    seed = ((seed << 5) - seed) + char;
+    seed = seed & seed; // Convert to 32-bit integer
   }
   
-  // Generate a proper UUID v4 format using the hash as seed
-  const hashHex = Math.abs(hash).toString(16).padStart(8, '0');
-  const randomHex = Math.random().toString(16).substr(2, 8);
-  const timeHex = Date.now().toString(16).substr(-8);
+  // Use the seed to generate a proper UUID v4
+  const random = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
   
-  // Create a proper UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  const uuid = [
-    hashHex.substr(0, 8),
-    hashHex.substr(0, 4),
-    '4' + randomHex.substr(1, 3), // Version 4
-    ((parseInt(randomHex.substr(0, 1), 16) & 0x3) | 0x8).toString(16) + timeHex.substr(0, 3), // Variant bits
-    timeHex + randomHex.substr(0, 8)
+  const hex = () => Math.floor(random() * 16).toString(16);
+  
+  // Generate UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  return [
+    Array(8).fill(0).map(() => hex()).join(''),
+    Array(4).fill(0).map(() => hex()).join(''),
+    '4' + Array(3).fill(0).map(() => hex()).join(''),
+    (8 + Math.floor(random() * 4)).toString(16) + Array(3).fill(0).map(() => hex()).join(''),
+    Array(12).fill(0).map(() => hex()).join('')
   ].join('-');
-  
-  return uuid;
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
