@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,7 @@ type SelectedService = {
 
 type MultiServiceSelectorProps = {
   services: Service[];
-  onAddTransaction: (transaction: any) => Promise<void>;
+  onAddTransaction: (transaction: any) => Promise<any>;
   isLoading: boolean;
 };
 
