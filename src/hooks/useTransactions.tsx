@@ -98,10 +98,15 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // Use the user ID directly from the auth context (now properly formatted as UUID)
-      const userId = user.id;
+      // Get the current session to ensure we have the correct user ID
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.user) {
+        throw new Error('No valid session found');
+      }
 
-      console.log('Using user ID for transaction:', userId);
+      const userId = session.user.id;
+      console.log('Using authenticated user ID for transaction:', userId);
 
       // Prepare the transaction data for database storage
       const transactionData = {
