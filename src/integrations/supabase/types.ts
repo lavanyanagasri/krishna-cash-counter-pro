@@ -87,6 +87,54 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_items: {
+        Row: {
+          created_at: string
+          id: string
+          quantity: number
+          service_id: string
+          total_cost: number
+          transaction_id: string
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          quantity: number
+          service_id: string
+          total_cost: number
+          transaction_id: string
+          unit_cost: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          quantity?: number
+          service_id?: string
+          total_cost?: number
+          transaction_id?: string
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           cost: number
@@ -98,6 +146,7 @@ export type Database = {
           estimation: number
           final_cost: number
           id: string
+          is_multi_service: boolean | null
           notes: string | null
           paper_size: Database["public"]["Enums"]["paper_size"]
           payment_method: string | null
@@ -121,6 +170,7 @@ export type Database = {
           estimation?: number
           final_cost: number
           id?: string
+          is_multi_service?: boolean | null
           notes?: string | null
           paper_size: Database["public"]["Enums"]["paper_size"]
           payment_method?: string | null
@@ -144,6 +194,7 @@ export type Database = {
           estimation?: number
           final_cost?: number
           id?: string
+          is_multi_service?: boolean | null
           notes?: string | null
           paper_size?: Database["public"]["Enums"]["paper_size"]
           payment_method?: string | null

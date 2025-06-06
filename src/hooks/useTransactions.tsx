@@ -23,11 +23,25 @@ type Transaction = {
   payment_method?: string;
   discount_reason?: string;
   transaction_reference?: string;
+  is_multi_service?: boolean;
   created_at: string;
   updated_at: string;
 };
 
 type TransactionInsert = Omit<Transaction, 'id' | 'created_at' | 'updated_at'>;
+
+type TransactionItem = {
+  id: string;
+  transaction_id: string;
+  service_id: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type TransactionItemInsert = Omit<TransactionItem, 'id' | 'created_at' | 'updated_at'>;
 
 export const useTransactions = () => {
   const { user } = useAuth();
@@ -71,7 +85,7 @@ export const useTransactions = () => {
     }
   }, [user]);
 
-  const addTransaction = async (transaction: TransactionInsert) => {
+  const addTransaction = async (transaction: TransactionInsert & { items?: TransactionItemInsert[] }) => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -108,7 +122,8 @@ export const useTransactions = () => {
         customer_phone: transaction.customer_phone,
         payment_method: transaction.payment_method || transaction.sales_type,
         discount_reason: transaction.discount_reason,
-        transaction_reference: transaction.transaction_reference
+        transaction_reference: transaction.transaction_reference,
+        is_multi_service: transaction.is_multi_service || false
       };
 
       console.log('Storing transaction in database:', transactionData);
@@ -122,6 +137,28 @@ export const useTransactions = () => {
       if (error) {
         console.error('Database error:', error);
         throw error;
+      }
+
+      // If this is a multi-service transaction, also insert the transaction items
+      if (transaction.items && transaction.items.length > 0) {
+        const itemsData = transaction.items.map(item => ({
+          ...item,
+          transaction_id: data.id
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('transaction_items')
+          .insert(itemsData);
+
+        if (itemsError) {
+          console.error('Error inserting transaction items:', itemsError);
+          // Don't throw here as the main transaction was successful
+          toast({
+            title: "Partial Success",
+            description: "Transaction saved but some item details may be missing",
+            variant: "destructive",
+          });
+        }
       }
 
       // Update local state with the new transaction from database
@@ -153,6 +190,7 @@ export const useTransactions = () => {
     setIsDeletingTransaction(true);
     
     try {
+      // Delete transaction items first (will be handled by CASCADE)
       const { error } = await supabase
         .from('transactions')
         .delete()

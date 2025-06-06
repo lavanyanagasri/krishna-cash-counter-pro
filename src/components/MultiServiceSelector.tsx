@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,14 @@ const MultiServiceSelector = ({ services, onAddTransaction, isLoading }: MultiSe
     // Use the first service for compatibility with existing schema
     const primaryService = selectedServices[0].service;
 
+    // Prepare transaction items for the new table
+    const transactionItems = selectedServices.map(item => ({
+      service_id: item.service.id,
+      quantity: item.quantity,
+      unit_cost: item.service.price,
+      total_cost: item.cost
+    }));
+
     try {
       await onAddTransaction({
         date: currentDate,
@@ -117,6 +126,8 @@ const MultiServiceSelector = ({ services, onAddTransaction, isLoading }: MultiSe
         customer_name: customerName.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
         payment_method: salesType,
+        is_multi_service: true,
+        items: transactionItems
       });
 
       // Reset form
