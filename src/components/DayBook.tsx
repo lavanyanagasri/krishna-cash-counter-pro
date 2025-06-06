@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,8 @@ const DayBook = () => {
   const [quantity, setQuantity] = useState("");
   const [estimation, setEstimation] = useState("");
   const [notes, setNotes] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const calculateFinalCost = () => {
     const qty = parseInt(quantity) || 0;
@@ -63,12 +66,16 @@ const DayBook = () => {
         service_id: selectedService.id,
         service_type: selectedService.service_type,
         notes: notes.trim() || undefined,
+        customer_name: customerName.trim() || undefined,
+        customer_phone: customerPhone.trim() || undefined,
       });
 
       // Reset form after successful database storage
       setQuantity("");
       setEstimation("");
       setNotes("");
+      setCustomerName("");
+      setCustomerPhone("");
       setSelectedService(null);
     } catch (error) {
       console.error('Error adding transaction to database:', error);
@@ -104,6 +111,17 @@ const DayBook = () => {
     return labels[serviceType as keyof typeof labels] || serviceType;
   };
 
+  const getServicesForTransaction = (transaction: any) => {
+    if (transaction.is_multi_service) {
+      // Parse the notes to extract service names
+      const notesMatch = transaction.notes?.match(/Multi-service: ([^|]+)/);
+      return notesMatch ? notesMatch[1] : 'Multiple Services';
+    } else {
+      const service = services.find(s => s.id === transaction.service_id);
+      return service?.name || 'Legacy Service';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Multi-Service Transaction */}
@@ -122,6 +140,28 @@ const DayBook = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Customer Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="customerName">Customer Name (Optional)</Label>
+              <Input
+                id="customerName"
+                placeholder="Enter customer name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customerPhone">Customer Phone (Optional)</Label>
+              <Input
+                id="customerPhone"
+                placeholder="Enter phone number"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="salesType">Sales Type</Label>
@@ -290,58 +330,66 @@ const DayBook = () => {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
+                    <TableHead>Customer</TableHead>
                     <TableHead>Sales Type</TableHead>
-                    <TableHead>Service</TableHead>
+                    <TableHead>Services</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Discount</TableHead>
                     <TableHead>Final Cost</TableHead>
-                    <TableHead>Customer Notes</TableHead>
+                    <TableHead>Notes</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => {
-                    const service = services.find(s => s.id === transaction.service_id);
-                    return (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{new Date(transaction.date).toLocaleDateString('en-IN')}</TableCell>
-                        <TableCell>{transaction.time}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            transaction.sales_type === 'Cash' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {transaction.sales_type}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">{service?.name || 'Legacy Service'}</div>
-                            <div className="text-gray-500">{getServiceTypeLabel(transaction.service_type || 'xerox')}</div>
-                            {service?.paper_size && (
-                              <div className="text-xs text-gray-400">{service.paper_size}</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{transaction.quantity}</TableCell>
-                        <TableCell>₹{transaction.cost}</TableCell>
-                        <TableCell>₹{transaction.estimation}</TableCell>
-                        <TableCell className="font-semibold">₹{transaction.final_cost}</TableCell>
-                        <TableCell className="max-w-xs truncate">{transaction.notes || '-'}</TableCell>
-                        <TableCell>
-                          <Button
-                            onClick={() => deleteTransaction(transaction.id)}
-                            variant="destructive"
-                            size="sm"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>{new Date(transaction.date).toLocaleDateString('en-IN')}</TableCell>
+                      <TableCell>{transaction.time}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {transaction.customer_name && (
+                            <div className="font-medium">{transaction.customer_name}</div>
+                          )}
+                          {transaction.customer_phone && (
+                            <div className="text-gray-500 text-xs">{transaction.customer_phone}</div>
+                          )}
+                          {!transaction.customer_name && !transaction.customer_phone && (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          transaction.sales_type === 'Cash' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {transaction.sales_type}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm max-w-xs">
+                          <div className="font-medium">{getServicesForTransaction(transaction)}</div>
+                          <div className="text-gray-500">{getServiceTypeLabel(transaction.service_type || 'xerox')}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{transaction.quantity}</TableCell>
+                      <TableCell>₹{transaction.cost}</TableCell>
+                      <TableCell>₹{transaction.estimation}</TableCell>
+                      <TableCell className="font-semibold">₹{transaction.final_cost}</TableCell>
+                      <TableCell className="max-w-xs truncate">{transaction.notes || '-'}</TableCell>
+                      <TableCell>
+                        <Button
+                          onClick={() => deleteTransaction(transaction.id)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>

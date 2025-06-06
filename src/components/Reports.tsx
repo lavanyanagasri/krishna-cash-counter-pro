@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,14 +32,65 @@ const Reports = () => {
     const printContent = document.getElementById('printable-report');
     if (!printContent) return;
 
+    // Get today's transactions for print
+    const today = new Date().toISOString().split('T')[0];
+    const todayTransactions = transactions.filter(t => t.date === today);
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    // Create table for today's transactions
+    const transactionsTableHTML = todayTransactions.length > 0 ? `
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <thead>
+          <tr>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Time</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Customer</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Payment</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Services</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Qty</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Cost</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Discount</th>
+            <th style="border: 1px solid #ddd; padding: 8px; background-color: #f8f9fa;">Final</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${todayTransactions.map(transaction => {
+            const service = services.find(s => s.id === transaction.service_id);
+            const servicesText = transaction.is_multi_service 
+              ? (transaction.notes?.match(/Multi-service: ([^|]+)/)?.[1] || 'Multiple Services')
+              : (service?.name || 'Legacy Service');
+            
+            return `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${transaction.time}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">
+                  ${transaction.customer_name || '-'}
+                  ${transaction.customer_phone ? `<br><small>${transaction.customer_phone}</small>` : ''}
+                </td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${transaction.sales_type}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${servicesText}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${transaction.quantity}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">₹${transaction.cost}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">₹${transaction.estimation}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">₹${transaction.final_cost}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    ` : '<p style="text-align: center; color: #666;">No transactions found for today.</p>';
+
+    // Calculate today's totals
+    const todayTotal = todayTransactions.reduce((sum, t) => sum + t.final_cost, 0);
+    const todayCash = todayTransactions.filter(t => t.sales_type === 'Cash').reduce((sum, t) => sum + t.final_cost, 0);
+    const todayPhonePe = todayTransactions.filter(t => t.sales_type === 'PhonePe').reduce((sum, t) => sum + t.final_cost, 0);
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Vaishnavi Jumbo Zerox - ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report</title>
+          <title>Vaishnavi Jumbo Zerox - Daily Report</title>
           <style>
             body { 
               font-family: Arial, sans-serif; 
@@ -116,9 +166,30 @@ const Reports = () => {
           <div class="header">
             <div class="company-name">Vaishnavi Jumbo Zerox</div>
             <div class="company-subtitle">Powered by Sri Murali Krishna Computers</div>
-            <div class="report-title">${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report - ${new Date().toLocaleDateString('en-IN')}</div>
+            <div class="report-title">Daily Report - ${new Date().toLocaleDateString('en-IN')}</div>
           </div>
-          ${printContent.innerHTML}
+          
+          <div class="summary-grid">
+            <div class="summary-card">
+              <div class="summary-title">Total Transactions</div>
+              <div class="summary-value">${todayTransactions.length}</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-title">Total Revenue</div>
+              <div class="summary-value">₹${todayTotal.toLocaleString()}</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-title">Cash Sales</div>
+              <div class="summary-value">₹${todayCash.toLocaleString()}</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-title">PhonePe Sales</div>
+              <div class="summary-value">₹${todayPhonePe.toLocaleString()}</div>
+            </div>
+          </div>
+
+          <h3>Today's Transactions</h3>
+          ${transactionsTableHTML}
         </body>
       </html>
     `);
@@ -327,7 +398,7 @@ const Reports = () => {
 
             <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
               <Printer className="w-4 h-4 mr-2" />
-              Print Report
+              Print Today's Report
             </Button>
           </div>
         </CardContent>
