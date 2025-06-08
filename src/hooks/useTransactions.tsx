@@ -107,9 +107,26 @@ export const useTransactions = () => {
         userId = session.user.id;
         console.log('Using Supabase authenticated user ID for transaction:', userId);
       } else {
-        // Fallback to using the user ID from auth context for localStorage users
-        userId = user.id;
-        console.log('Using auth context user ID for transaction:', userId);
+        // For localStorage users (like admin), we need to check if they're actually authenticated
+        // and create a temporary session or handle differently
+        console.log('No Supabase session found, checking localStorage auth...');
+        
+        // Check if this is an admin user with localStorage auth
+        const isAuthenticated = localStorage.getItem('isAuthenticated');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        if (isAuthenticated === 'true' && userEmail === 'admin@vaishnavi.com') {
+          // For admin users without Supabase session, we'll disable RLS temporarily
+          // by using the service role or handle this differently
+          toast({
+            title: "Authentication Issue",
+            description: "Admin login detected but no Supabase session. Please use proper authentication.",
+            variant: "destructive",
+          });
+          return;
+        } else {
+          throw new Error('No valid authentication found');
+        }
       }
 
       // Prepare the transaction data for database storage
