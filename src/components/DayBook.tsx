@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Database } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useServices, Service } from "@/hooks/useServices";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Textarea } from "@/components/ui/textarea";
 import MultiServiceSelector from "./MultiServiceSelector";
 
@@ -17,6 +17,7 @@ type SalesType = "Cash" | "PhonePe";
 const DayBook = () => {
   const { transactions, addTransaction, deleteTransaction, isAddingTransaction } = useTransactions();
   const { services, isLoading: servicesLoading } = useServices();
+  const { isAdmin } = useAdmin();
   
   const [salesType, setSalesType] = useState<SalesType>("Cash");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -113,9 +114,15 @@ const DayBook = () => {
 
   const getServicesForTransaction = (transaction: any) => {
     if (transaction.is_multi_service) {
-      // Parse the notes to extract service names
-      const notesMatch = transaction.notes?.match(/Multi-service: ([^|]+)/);
-      return notesMatch ? notesMatch[1] : 'Multiple Services';
+      // For multi-service transactions, try to parse the services from notes
+      if (transaction.notes?.includes('Multi-service:')) {
+        const servicesPart = transaction.notes.split('Multi-service:')[1];
+        if (servicesPart) {
+          const servicesText = servicesPart.split('|')[0]?.trim();
+          return servicesText || 'Multiple Services';
+        }
+      }
+      return 'Multiple Services';
     } else {
       const service = services.find(s => s.id === transaction.service_id);
       return service?.name || 'Legacy Service';
@@ -338,7 +345,7 @@ const DayBook = () => {
                     <TableHead>Discount</TableHead>
                     <TableHead>Final Cost</TableHead>
                     <TableHead>Notes</TableHead>
-                    <TableHead>Action</TableHead>
+                    {isAdmin && <TableHead>Action</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -379,15 +386,17 @@ const DayBook = () => {
                       <TableCell>₹{transaction.estimation}</TableCell>
                       <TableCell className="font-semibold">₹{transaction.final_cost}</TableCell>
                       <TableCell className="max-w-xs truncate">{transaction.notes || '-'}</TableCell>
-                      <TableCell>
-                        <Button
-                          onClick={() => deleteTransaction(transaction.id)}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button
+                            onClick={() => deleteTransaction(transaction.id)}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

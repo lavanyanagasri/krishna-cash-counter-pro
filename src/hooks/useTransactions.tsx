@@ -98,15 +98,19 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // Get the current session to ensure we have the correct user ID
+      let userId: string;
+
+      // Try to get the user ID from Supabase session first
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
-        throw new Error('No valid session found');
+      if (session?.user?.id) {
+        userId = session.user.id;
+        console.log('Using Supabase authenticated user ID for transaction:', userId);
+      } else {
+        // Fallback to using the user ID from auth context for localStorage users
+        userId = user.id;
+        console.log('Using auth context user ID for transaction:', userId);
       }
-
-      const userId = session.user.id;
-      console.log('Using authenticated user ID for transaction:', userId);
 
       // Prepare the transaction data for database storage
       const transactionData = {
