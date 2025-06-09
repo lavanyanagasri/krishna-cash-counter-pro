@@ -146,14 +146,40 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Try Supabase auth first
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        // Fallback to localStorage for demo
+        // Fallback to localStorage for demo admin and registered users
         if (email === 'admin@vaishnavi.com' && password === 'admin123') {
+          // First try to sign up the admin user in Supabase if they don't exist
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: 'admin@vaishnavi.com',
+            password: 'admin123',
+          });
+
+          if (signUpError && !signUpError.message.includes('already registered')) {
+            console.error('Admin signup error:', signUpError);
+          }
+
+          // Now try to sign in again
+          const { data: adminData, error: adminError } = await supabase.auth.signInWithPassword({
+            email: 'admin@vaishnavi.com',
+            password: 'admin123',
+          });
+
+          if (adminData?.user) {
+            toast({
+              title: "Admin Signed In",
+              description: "Welcome back, admin!",
+            });
+            return;
+          }
+
+          // If Supabase auth still fails, fall back to localStorage
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userEmail', email);
           
@@ -166,12 +192,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           toast({
             title: "Signed In (Demo Mode)",
-            description: "You have been signed in successfully using demo credentials.",
+            description: "Admin authenticated in demo mode. Database features may be limited.",
+            variant: "destructive",
           });
           return;
         }
 
-        // Check registered users
+        // Check registered users in localStorage
         const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
         const registeredUser = registeredUsers.find((user: any) => user.email === email && user.password === password);
 
