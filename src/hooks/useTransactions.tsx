@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
@@ -97,20 +98,20 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      let userId: string;
-
-      // Try to get the user ID from Supabase session first
+      // Check if we have a valid Supabase session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (session?.user?.id) {
-        userId = session.user.id;
-        console.log('Using Supabase authenticated user ID for transaction:', userId);
-      } else {
-        // For localStorage users, use the user ID from auth context
-        // This will work for properly authenticated users
-        userId = user.id;
-        console.log('Using auth context user ID for transaction:', userId);
+      if (!session?.user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in with proper Supabase authentication to add transactions.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const userId = session.user.id;
+      console.log('Using Supabase authenticated user ID for transaction:', userId);
 
       // Prepare the transaction data for database storage
       const transactionData = {

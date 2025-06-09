@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -146,7 +147,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Try Supabase auth first
+      // For admin, try to ensure they exist in Supabase first
+      if (email === 'admin@vaishnavi.com' && password === 'admin123') {
+        // First try to sign up the admin user if they don't exist
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: 'admin@vaishnavi.com',
+          password: 'admin123',
+        });
+
+        // Ignore "already registered" errors
+        if (signUpError && !signUpError.message.includes('already registered')) {
+          console.error('Admin signup error:', signUpError);
+        }
+
+        // Small delay to ensure the signup process completes
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Now try to sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -155,31 +173,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (error) {
         // Fallback to localStorage for demo admin and registered users
         if (email === 'admin@vaishnavi.com' && password === 'admin123') {
-          // First try to sign up the admin user in Supabase if they don't exist
-          const { error: signUpError } = await supabase.auth.signUp({
-            email: 'admin@vaishnavi.com',
-            password: 'admin123',
-          });
-
-          if (signUpError && !signUpError.message.includes('already registered')) {
-            console.error('Admin signup error:', signUpError);
-          }
-
-          // Now try to sign in again
-          const { data: adminData, error: adminError } = await supabase.auth.signInWithPassword({
-            email: 'admin@vaishnavi.com',
-            password: 'admin123',
-          });
-
-          if (adminData?.user) {
-            toast({
-              title: "Admin Signed In",
-              description: "Welcome back, admin!",
-            });
-            return;
-          }
-
-          // If Supabase auth still fails, fall back to localStorage
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userEmail', email);
           
