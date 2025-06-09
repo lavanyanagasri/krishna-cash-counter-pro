@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // For admin, try to ensure they exist in Supabase first
+      // For admin, ensure they are properly signed up and signed in to Supabase
       if (email === 'admin@vaishnavi.com' && password === 'admin123') {
         // First try to sign up the admin user if they don't exist
         const { error: signUpError } = await supabase.auth.signUp({
@@ -162,36 +162,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         // Small delay to ensure the signup process completes
         await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Now try to sign in with Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: 'admin@vaishnavi.com',
+          password: 'admin123',
+        });
+
+        if (data?.user && !error) {
+          toast({
+            title: "Admin Signed In",
+            description: "Welcome back, admin! You can now add transactions.",
+          });
+          return;
+        }
+
+        // If Supabase auth fails, show error (don't fall back to localStorage for admin)
+        console.error('Admin Supabase sign in failed:', error);
+        toast({
+          title: "Admin Authentication Failed",
+          description: "Could not authenticate admin with Supabase. Please try again.",
+          variant: "destructive",
+        });
+        throw new Error('Admin Supabase authentication failed');
       }
 
-      // Now try to sign in with Supabase
+      // For non-admin users, try Supabase first
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        // Fallback to localStorage for demo admin and registered users
-        if (email === 'admin@vaishnavi.com' && password === 'admin123') {
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('userEmail', email);
-          
-          const userData: User = { 
-            email: email,
-            id: generateUserUUID(email)
-          };
-          setUser(userData);
-          setSession({ user: userData });
-          
-          toast({
-            title: "Signed In (Demo Mode)",
-            description: "Admin authenticated in demo mode. Database features may be limited.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Check registered users in localStorage
+        // Check registered users in localStorage for non-admin users
         const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
         const registeredUser = registeredUsers.find((user: any) => user.email === email && user.password === password);
 
