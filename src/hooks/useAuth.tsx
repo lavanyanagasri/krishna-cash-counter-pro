@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -132,27 +133,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       // For admin, ensure they are properly signed up and signed in to Supabase
       if (email === 'admin@vaishnavi.com' && password === 'admin123') {
-        // First try to sign up the admin user if they don't exist
-        const { error: signUpError } = await supabase.auth.signUp({
+        console.log('Admin login attempt - trying Supabase authentication');
+        
+        // Try to sign in with Supabase first
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: 'admin@vaishnavi.com',
           password: 'admin123',
         });
 
-        // Ignore "already registered" errors
-        if (signUpError && !signUpError.message.includes('already registered')) {
-          console.error('Admin signup error:', signUpError);
-        }
+        if (signInError) {
+          console.log('Admin sign in failed, trying signup:', signInError.message);
+          
+          // If sign in fails, try to sign up the admin user
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: 'admin@vaishnavi.com',
+            password: 'admin123',
+            options: {
+              emailRedirectTo: `${window.location.origin}/`
+            }
+          });
 
-        // Small delay to ensure the signup process completes
-        await new Promise(resolve => setTimeout(resolve, 1000));
+          if (signUpError) {
+            console.error('Admin signup failed:', signUpError);
+            if (signUpError.message.includes('already registered')) {
+              // User exists but password might be wrong, try alternative
+              toast({
+                title: "Admin Sign In Issue",
+                description: "Admin account exists but sign in failed. Please check your credentials.",
+                variant: "destructive",
+              });
+              return;
+            }
+            throw signUpError;
+          }
 
-        // Now try to sign in with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'admin@vaishnavi.com',
-          password: 'admin123',
-        });
+          // If signup was successful, try signing in again
+          if (signUpData.user) {
+            console.log('Admin signup successful, trying to sign in again');
+            const { data: retrySignInData, error: retrySignInError } = await supabase.auth.signInWithPassword({
+              email: 'admin@vaishnavi.com',
+              password: 'admin123',
+            });
 
-        if (data?.user && !error) {
+            if (retrySignInError) {
+              console.error('Admin retry sign in failed:', retrySignInError);
+              throw retrySignInError;
+            }
+
+            if (retrySignInData.user) {
+              console.log('Admin authenticated successfully with Supabase');
+              toast({
+                title: "Admin Signed In",
+                description: "Welcome back, admin! You can now add transactions.",
+              });
+              return;
+            }
+          }
+        } else if (signInData.user) {
+          console.log('Admin authenticated successfully with Supabase');
           toast({
             title: "Admin Signed In",
             description: "Welcome back, admin! You can now add transactions.",
@@ -160,14 +198,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
-        // If Supabase auth fails, show error (don't fall back to localStorage for admin)
-        console.error('Admin Supabase sign in failed:', error);
-        toast({
-          title: "Admin Authentication Failed",
-          description: "Could not authenticate admin with Supabase. Please try again.",
-          variant: "destructive",
-        });
-        throw new Error('Admin Supabase authentication failed');
+        // If we reach here, something went wrong
+        throw new Error('Admin authentication failed');
       }
 
       // For non-admin users, try Supabase first
