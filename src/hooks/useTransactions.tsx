@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from './use-toast';
@@ -101,9 +102,19 @@ export const useTransactions = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (!session?.user) {
+        // For admin users who might not have a Supabase session but are authenticated locally
+        if (user.email === 'admin@vaishnavi.com') {
+          toast({
+            title: "Authentication Issue",
+            description: "Admin account needs to be properly authenticated with Supabase. Please sign out and sign in again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         toast({
           title: "Authentication Required",
-          description: "Please sign in with Supabase authentication to add transactions. Try signing out and signing in again.",
+          description: "Please sign in with Supabase authentication to add transactions.",
           variant: "destructive",
         });
         return;

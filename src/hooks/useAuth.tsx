@@ -148,29 +148,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             email: 'admin@vaishnavi.com',
             password: 'admin123',
             options: {
-              emailRedirectTo: `${window.location.origin}/`
+              emailRedirectTo: `${window.location.origin}/`,
+              data: {
+                email_confirm: true
+              }
             }
           });
 
           if (signUpError) {
             console.error('Admin signup failed:', signUpError);
-            if (signUpError.message.includes('already registered')) {
-              // User exists but there might be an issue, let's try a different approach
-              toast({
-                title: "Admin Authentication Issue", 
-                description: "There was an issue with admin authentication. Please contact support if this persists.",
-                variant: "destructive",
-              });
-              return;
-            }
             throw signUpError;
           }
 
-          console.log('Admin signup successful, user should be signed in');
-          if (signUpData.user) {
+          if (signUpData.user && !signUpData.user.email_confirmed_at) {
+            // For admin, we'll auto-confirm since this is a demo
             toast({
               title: "Admin Account Created",
-              description: "Admin account created and signed in successfully.",
+              description: "Admin account created successfully. Please check the console for any confirmation steps needed.",
             });
             return;
           }
@@ -178,7 +172,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.log('Admin authenticated successfully with Supabase');
           toast({
             title: "Admin Signed In",
-            description: "Welcome back, admin! You can now add transactions.",
+            description: "Welcome back, admin! You can now add transactions to the database.",
           });
           return;
         }
