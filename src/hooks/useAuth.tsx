@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -131,7 +130,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // For admin, ensure they are properly signed up and signed in to Supabase
+      // For admin, always use Supabase authentication
       if (email === 'admin@vaishnavi.com' && password === 'admin123') {
         console.log('Admin login attempt - trying Supabase authentication');
         
@@ -156,10 +155,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           if (signUpError) {
             console.error('Admin signup failed:', signUpError);
             if (signUpError.message.includes('already registered')) {
-              // User exists but password might be wrong, try alternative
+              // User exists but there might be an issue, let's try a different approach
               toast({
-                title: "Admin Sign In Issue",
-                description: "Admin account exists but sign in failed. Please check your credentials.",
+                title: "Admin Authentication Issue", 
+                description: "There was an issue with admin authentication. Please contact support if this persists.",
                 variant: "destructive",
               });
               return;
@@ -167,27 +166,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             throw signUpError;
           }
 
-          // If signup was successful, try signing in again
+          console.log('Admin signup successful, user should be signed in');
           if (signUpData.user) {
-            console.log('Admin signup successful, trying to sign in again');
-            const { data: retrySignInData, error: retrySignInError } = await supabase.auth.signInWithPassword({
-              email: 'admin@vaishnavi.com',
-              password: 'admin123',
+            toast({
+              title: "Admin Account Created",
+              description: "Admin account created and signed in successfully.",
             });
-
-            if (retrySignInError) {
-              console.error('Admin retry sign in failed:', retrySignInError);
-              throw retrySignInError;
-            }
-
-            if (retrySignInData.user) {
-              console.log('Admin authenticated successfully with Supabase');
-              toast({
-                title: "Admin Signed In",
-                description: "Welcome back, admin! You can now add transactions.",
-              });
-              return;
-            }
+            return;
           }
         } else if (signInData.user) {
           console.log('Admin authenticated successfully with Supabase');
@@ -197,9 +182,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           });
           return;
         }
-
-        // If we reach here, something went wrong
-        throw new Error('Admin authentication failed');
       }
 
       // For non-admin users, try Supabase first

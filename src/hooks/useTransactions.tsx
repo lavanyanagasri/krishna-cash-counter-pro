@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from './use-toast';
@@ -98,27 +97,20 @@ export const useTransactions = () => {
     setIsAddingTransaction(true);
     
     try {
-      // Check if we have a valid Supabase session first
+      // Check if we have a valid Supabase session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      let userId: string;
-      
-      if (session?.user) {
-        // Use Supabase authenticated user ID
-        userId = session.user.id;
-        console.log('Using Supabase authenticated user ID for transaction:', userId);
-      } else if (user.email === 'admin@vaishnavi.com') {
-        // For admin users without Supabase session, use the generated UUID from useAuth
-        userId = user.id;
-        console.log('Using admin user ID from useAuth for transaction:', userId);
-      } else {
+      if (!session?.user) {
         toast({
           title: "Authentication Required",
-          description: "Please sign in with proper Supabase authentication to add transactions.",
+          description: "Please sign in with Supabase authentication to add transactions. Try signing out and signing in again.",
           variant: "destructive",
         });
         return;
       }
+
+      const userId = session.user.id;
+      console.log('Using Supabase authenticated user ID for transaction:', userId);
 
       // Prepare the transaction data for database storage
       const transactionData = {
